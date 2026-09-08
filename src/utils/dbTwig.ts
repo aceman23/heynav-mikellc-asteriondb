@@ -52,15 +52,8 @@ export async function callDbTwig<T = Record<string, unknown>>(
   body?: object,
 ): Promise<DbTwigResponseT<T>> {
   const session = await getSessionCookie();
-  // DbTwig validates the session on every call. Before login there is no
-  // session, and the reference app sends "Bearer null" in that case, so we
-  // keep the header shape identical.
-  const bearerToken = session?.sessionId ?? null;
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Authorization: "Bearer " + bearerToken,
-  };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.sessionId) headers.Authorization = "Bearer " + session.sessionId;
 
   const requestOptions: RequestInit =
     undefined !== body
@@ -71,8 +64,7 @@ export async function callDbTwig<T = Record<string, unknown>>(
   const startedAt = Date.now();
 
   console.log(
-    `[dbTwig →] ${requestOptions.method} ${url}`,
-    JSON.stringify({ headers: forLog(headers), body: body ? forLog(body) : undefined }, null, 2),
+    `[dbTwig →] ${requestOptions.method} ${url} | headerKeys=${JSON.stringify(Object.keys(headers))} | Authorization=${headers.Authorization ? "present" : "absent"}`,
   );
 
   let httpResponse: Response;
