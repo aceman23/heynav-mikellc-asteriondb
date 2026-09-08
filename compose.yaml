@@ -1,0 +1,11 @@
+# docker compose up --build   (or: podman compose up --build)
+services:
+  heynav:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DB_TWIG_URL: ${DB_TWIG_URL:-https://cloud-test.asteriondb.com/dbTwig}
+      DB_TWIG_LOGIN_SETTINGS_API: ${DB_TWIG_LOGIN_SETTINGS_API:-dbBunker/getLoginPageSettings}
+      DB_TWIG_LOG_SECRETS: ${DB_TWIG_LOG_SECRETS:-0}
+    restart: unless-stopped
