@@ -1,5 +1,9 @@
 # Hey Nav
 
+<img width="1280" height="800" alt="heynav-login-preview" src="https://github.com/user-attachments/assets/26304b47-2bed-43ce-8e3f-73322dd2a884" />
+
+
+
 Front end for **Hey Nav**, MIKE LLC's governed CUI workspace, built on the
 [AsterionDB](https://asteriondb.com) data-layer architecture. This repository currently
 contains the sign-in / sign-out flow and the signed-in application shell (sidebar navigation,
