@@ -7,7 +7,7 @@
 Front end for **Hey Nav**, MIKE LLC's governed CUI workspace, built on the
 [AsterionDB](https://asteriondb.com) data-layer architecture. This repository currently
 contains the sign-in / sign-out flow and the signed-in application shell (sidebar navigation,
-profile menu, dashboard). The seven product functions are stubbed and will be wired to DbTwig as
+profile menu, dashboard). The seven simulated product functions are stubbed and will be wired to DbTwig as
 their build cards land.
 
 The application follows the `vm-manager` reference in
