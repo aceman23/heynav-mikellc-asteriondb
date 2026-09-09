@@ -1,4 +1,4 @@
-# Hey Nav
+# Hey Nav powered by AsterionDB
 
 <img width="1280" height="800" alt="heynav-login-preview" src="https://github.com/user-attachments/assets/26304b47-2bed-43ce-8e3f-73322dd2a884" />
 
