@@ -1,14 +1,8 @@
 // Server-only transport for AsterionDB's DbTwig middle tier.
 //
-// Mirrors vm-manager/src/utils/serverFunctions.ts::callDbTwig from
-// https://github.com/JumpinJackFlash/database-os, with one addition: every
-// call is traced to the server console so you can watch exactly how the API
-// is exercised (method, URL, headers, body, status, timing, payload).
-//
-// Import this only from files marked 'use server'. It reads the session
-// cookie, so it must never be bundled into client components.
-
-import { getSessionCookie } from "./sessionCookie";
+// Pure HTTP transport: callers read the session cookie themselves and pass
+// the sessionId in. This keeps dbTwig.ts free of next/headers so it can be
+// safely imported from both "use server" modules and Server Components.
 
 export type DbTwigResponseT<T = Record<string, unknown>> = {
   jsonData: T;
@@ -49,15 +43,14 @@ function forLog(obj: unknown): unknown {
 
 export async function callDbTwig<T = Record<string, unknown>>(
   apiCall: string,
-  body?: object,
+  options?: { body?: object; sessionId?: string },
 ): Promise<DbTwigResponseT<T>> {
-  const session = await getSessionCookie();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (session?.sessionId) headers.Authorization = "Bearer " + session.sessionId;
+  if (options?.sessionId) headers.Authorization = "Bearer " + options.sessionId;
 
   const requestOptions: RequestInit =
-    undefined !== body
-      ? { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" }
+    options?.body !== undefined
+      ? { method: "POST", headers, body: JSON.stringify(options.body), cache: "no-store" }
       : { method: "GET", headers, cache: "no-store" };
 
   const url = DB_TWIG_URL + "/" + apiCall;
@@ -79,7 +72,6 @@ export async function callDbTwig<T = Record<string, unknown>>(
     };
   }
 
-  // DbTwig normally answers JSON, but proxies and 5xx pages may not.
   const rawText = await httpResponse.text();
   let jsonData: T;
   try {

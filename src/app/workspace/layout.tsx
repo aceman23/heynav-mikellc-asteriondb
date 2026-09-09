@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "./AppShell";
-import { getSessionSummary } from "@/utils/serverFunctions";
+import { getSessionSummary } from "@/utils/serverQueries";
 import "./app.css";
 
 export const dynamic = "force-dynamic";

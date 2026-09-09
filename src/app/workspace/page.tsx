@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { getSessionSummary } from "@/utils/serverFunctions";
+import { getSessionSummary } from "@/utils/serverQueries";
 
 // Dashboard. Nothing here is faked: workspace listing lands with C-1/C-2,
 // so until the heyNav DbTwig service exists this is an honest empty state

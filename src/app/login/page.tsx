@@ -1,7 +1,7 @@
 import { MarkingBar } from "../components/MarkingBar";
 import { Wordmark } from "../components/Wordmark";
 import { LoginForm } from "./LoginForm";
-import { getLoginPageSettings } from "@/utils/serverFunctions";
+import { getLoginPageSettings } from "@/utils/serverQueries";
 
 export const dynamic = "force-dynamic";
 

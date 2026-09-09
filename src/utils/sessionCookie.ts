@@ -1,19 +1,13 @@
-"use server";
-
 // Equivalent of vm-manager/src/utils/coookieMonster.ts.
 // The DbTwig sessionId lives only in an httpOnly cookie; the browser never
 // sees it. Server functions read it back to build the Bearer header.
 
 import { cookies } from "next/headers";
+import type { SessionCookieT } from "./types";
+
+export type { SessionCookieT };
 
 const SESSION_COOKIE = "heynav.session";
-
-export type SessionCookieT = {
-  sessionId: string;
-  displayName: string;
-  emailAddress: string | null;
-  signedInAt: string; // ISO timestamp
-};
 
 export async function createSessionCookie(data: SessionCookieT) {
   const cookieStore = await cookies();
