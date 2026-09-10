@@ -12,22 +12,10 @@ const SESSION_COOKIE = "heynav.session";
 const LOGIN_SETTINGS_API =
   process.env.DB_TWIG_LOGIN_SETTINGS_API ?? "dbBunker/getLoginPageSettings";
 
-async function getSessionId(): Promise<string | undefined> {
-  const cookieStore = await cookies();
-  const raw = cookieStore.get(SESSION_COOKIE);
-  if (!raw || "" === raw.value) return undefined;
-  try {
-    return (JSON.parse(raw.value) as SessionCookieT).sessionId;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function getLoginPageSettings(): Promise<
   ServerResponseT<Record<string, unknown>> & { dataLayer: string; apiCall: string }
 > {
-  const sessionId = await getSessionId();
-  const response = await callDbTwig<Record<string, unknown>>(LOGIN_SETTINGS_API, { sessionId });
+  const response = await callDbTwig<Record<string, unknown>>(LOGIN_SETTINGS_API);
   return { ...response, dataLayer: dbTwigBaseUrl(), apiCall: LOGIN_SETTINGS_API };
 }
 

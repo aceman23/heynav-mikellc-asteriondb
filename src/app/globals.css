@@ -226,6 +226,13 @@ a.btn, a.btn:hover, a.btn:focus, a.btn:active, a.btn:visited { text-decoration: 
   letter-spacing: 0.04em;
   color: var(--steel);
 }
+.asterion-logo {
+  display: block;
+  margin: 16px auto 0;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+.asterion-logo:hover { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .btn, .control { transition: none; }
