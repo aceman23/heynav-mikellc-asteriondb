@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { callDbTwig } from "@/utils/dbTwig";
-import { createSessionCookie } from "@/utils/sessionCookie";
 import type { UserSessionT } from "@/utils/types";
 
 export async function POST(request: Request) {
@@ -38,17 +37,25 @@ export async function POST(request: Request) {
   });
   const { sessionId, ...publicData } = response.jsonData ?? ({} as UserSessionT);
 
+  const payload = { jsonData: publicData, ok: response.ok, httpStatus: response.httpStatus };
+  const result = NextResponse.json(payload, { status: response.ok ? 200 : response.httpStatus || 502 });
+
   if (response.ok && sessionId) {
     const displayName =
       [publicData.firstName, publicData.lastName].filter(Boolean).join(" ") || identification;
-    await createSessionCookie({
+    result.cookies.set("heynav.session", JSON.stringify({
       sessionId,
       displayName,
       emailAddress: publicData.emailAddress ?? null,
       signedInAt: new Date().toISOString(),
+    }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
     });
+    console.log(`[cookie] set heynav.session for ${displayName}`);
   }
 
-  const payload = { jsonData: publicData, ok: response.ok, httpStatus: response.httpStatus };
-  return NextResponse.json(payload, { status: response.ok ? 200 : response.httpStatus || 502 });
+  return result;
 }

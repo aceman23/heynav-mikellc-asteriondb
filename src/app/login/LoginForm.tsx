@@ -43,7 +43,16 @@ export function LoginForm({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ identification, password }),
         });
-        response = (await result.json()) as typeof response;
+        const rawResponse = await result.text();
+        try {
+          response = JSON.parse(rawResponse) as typeof response;
+        } catch {
+          response = {
+            ok: false,
+            httpStatus: result.status,
+            jsonData: { errorMessage: "The sign-in request returned an unexpected response." },
+          };
+        }
       } catch {
         response = {
           ok: false,
