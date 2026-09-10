@@ -44,7 +44,7 @@ endpoints or secrets.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `DB_TWIG_URL` | `https://cloud-test.asteriondb.com/dbTwig` | DbTwig endpoint of the AsterionDB instance |
-| `DB_TWIG_LOGIN_SETTINGS_API` | `dbBunker/getLoginPageSettings` | Anonymous call made when the login page renders. Change to the Hey Nav service once it is enrolled in DbTwig. |
+| `DB_TWIG_LOGIN_SETTINGS_API` | `dgBunker/getLoginPageSettings` | Anonymous call made when the login page renders. Change to the Hey Nav service once it is enrolled in DbTwig. |
 | `DB_TWIG_LOG_SECRETS` | `0` | `1` prints full session ids in the server log instead of a redacted prefix |
 | `PORT` | `3000` | Port for `npm start` / the container |
 
@@ -55,8 +55,8 @@ HTTP requests happen):
 
 ```
 [middleware] /login — session: none
-[dbTwig →] GET https://cloud-test.asteriondb.com/dbTwig/dbBunker/getLoginPageSettings { headers: … }
-[dbTwig ←] 200 OK dbBunker/getLoginPageSettings (212 ms) { … }
+[dbTwig →] GET https://cloud-test.asteriondb.com/dbTwig/dgBunker/getLoginPageSettings { headers: … }
+[dbTwig ←] 200 OK dgBunker/getLoginPageSettings (212 ms) { … }
 [dbTwig →] POST https://cloud-test.asteriondb.com/dbTwig/icam/createUserSession { body: { identification, password: "••••••••" } }
 [dbTwig ←] 200 OK icam/createUserSession (388 ms) { sessionId: "A49CF6ED…", sessionStatus: "active", firstName: … }
 [cookie] set heynav.session for AsterionDB Administrator

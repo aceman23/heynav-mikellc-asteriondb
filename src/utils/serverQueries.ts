@@ -10,7 +10,7 @@ import type { SessionCookieT, SessionSummaryT, ServerResponseT } from "./types";
 const SESSION_COOKIE = "heynav.session";
 
 const LOGIN_SETTINGS_API =
-  process.env.DB_TWIG_LOGIN_SETTINGS_API ?? "dbBunker/getLoginPageSettings";
+  process.env.DB_TWIG_LOGIN_SETTINGS_API ?? "dgBunker/getLoginPageSettings";
 
 export async function getLoginPageSettings(): Promise<
   ServerResponseT<Record<string, unknown>> & { dataLayer: string; apiCall: string }
