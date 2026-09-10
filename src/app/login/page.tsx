@@ -79,8 +79,8 @@ export default async function LoginPage({
             <LoginForm nextPath={next} settings={data} />
 
             <p className="help">Need access or locked out? Ask your workspace administrator — accounts are created inside your boundary, not by MIKE LLC.</p>
-            <Image src="/AsterionDBLogo350x75.png" alt="AsterionDB" width={175} height={38} className="asterion-logo" />
             <p className="foot">MIKE LLC · SDVOSB · CAGE 10KA6 · Powered by AsterionDB</p>
+            <Image src="/AsterionDBLogo350x75.png" alt="AsterionDB" width={175} height={38} className="asterion-logo" />
           </div>
         </section>
       </div>

@@ -225,6 +225,7 @@ a.btn, a.btn:hover, a.btn:focus, a.btn:active, a.btn:visited { text-decoration: 
   font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--steel);
+  text-align: center;
 }
 .asterion-logo {
   display: block;
