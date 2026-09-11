@@ -258,3 +258,18 @@ a.btn, a.btn:hover, a.btn:focus, a.btn:active, a.btn:visited { text-decoration: 
 .end-card .ledger dd { color: var(--ink); }
 .end-card .actions { display: flex; gap: 12px; margin-top: 28px; }
 .end-card .actions .btn { width: auto; padding-inline: 28px; }
+
+.end-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.end-info-panel {
+  background: var(--white);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.end-info-panel h3 { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--navy); margin-bottom: 10px; }
+.end-info-panel .ledger { margin-top: 0; border-top: none; }
+.end-info-panel .ledger div { grid-template-columns: 100px 1fr; padding: 6px 0; }
+
+@media (max-width: 600px) {
+  .end-info { grid-template-columns: 1fr; }
+}
