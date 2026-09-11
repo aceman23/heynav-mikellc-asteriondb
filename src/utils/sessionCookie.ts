@@ -22,7 +22,14 @@ export async function createSessionCookie(data: SessionCookieT) {
 
 export async function deleteSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
+  cookieStore.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
   console.log(`[cookie] deleted ${SESSION_COOKIE}`);
 }
 
