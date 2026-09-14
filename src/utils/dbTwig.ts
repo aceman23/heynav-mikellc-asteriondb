@@ -8,8 +8,6 @@
 // Import this only from files marked 'use server'. It reads the session
 // cookie, so it must never be bundled into client components.
 
-import { getSessionCookie } from "./sessionCookie";
-
 export type DbTwigResponseT<T = Record<string, unknown>> = {
   jsonData: T;
   ok: boolean;
@@ -50,16 +48,13 @@ function forLog(obj: unknown): unknown {
 export async function callDbTwig<T = Record<string, unknown>>(
   apiCall: string,
   body?: object,
+  sessionId?: string,
 ): Promise<DbTwigResponseT<T>> {
-  const session = await getSessionCookie();
-
   // DbTwig validates the session on every call by taking whatever follows
   // "Bearer " and converting it to a RAW session id inside the database.
-  // Before login there is no session, so the header must be OMITTED —
-  // sending "Bearer null" (as the vm-manager reference does) makes ICAM
-  // fail with ORA-06502 "hex to raw conversion error" on cloud-test.
+  // Before login there is no session, so the header must be OMITTED.
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (session?.sessionId) headers.Authorization = "Bearer " + session.sessionId;
+  if (sessionId) headers.Authorization = "Bearer " + sessionId;
 
   const requestOptions: RequestInit =
     undefined !== body
@@ -72,7 +67,7 @@ export async function callDbTwig<T = Record<string, unknown>>(
   console.log(
     `[dbTwig →] ${requestOptions.method} ${url}`,
     JSON.stringify(
-      { auth: session ? "bearer session" : "anonymous (no Authorization header)", headers: forLog(headers), body: body ? forLog(body) : undefined },
+      { auth: sessionId ? "bearer session" : "anonymous (no Authorization header)", headers: forLog(headers), body: body ? forLog(body) : undefined },
       null,
       2,
     ),

@@ -2,7 +2,11 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createUserSession } from "@/utils/serverFunctions";
+type LoginResponseT = {
+  jsonData?: { errorMessage?: string };
+  ok: boolean;
+  httpStatus: number;
+};
 
 export function LoginForm({
   nextPath,
@@ -32,22 +36,31 @@ export function LoginForm({
     console.log("[login] createUserSession →", { identification, password: "••••••••" });
 
     startTransition(async () => {
-      const response = await createUserSession(identification, password);
-      console.log("[login] createUserSession ←", response.httpStatus, response);
+      try {
+        const httpResponse = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identification, password }),
+        });
+        const response = (await httpResponse.json()) as LoginResponseT;
+        console.log("[login] createUserSession ←", response.httpStatus, response);
 
-      if (response.ok) {
-        router.replace(nextPath && nextPath.startsWith("/") ? nextPath : "/workspace");
-        return;
+        if (response.ok) {
+          router.replace(nextPath && nextPath.startsWith("/") ? nextPath : "/workspace");
+          return;
+        }
+
+        setError({
+          message:
+            response.jsonData?.errorMessage ??
+            (response.httpStatus === 0
+              ? "The data layer could not be reached. Check DB_TWIG_URL and try again."
+              : "That identification and password combination was not accepted."),
+          status: response.httpStatus,
+        });
+      } catch {
+        setError({ message: "The sign-in service could not be reached. Try again.", status: 0 });
       }
-
-      setError({
-        message:
-          response.jsonData?.errorMessage ??
-          (response.httpStatus === 0
-            ? "The data layer could not be reached. Check DB_TWIG_URL and try again."
-            : "That identification and password combination was not accepted."),
-        status: response.httpStatus,
-      });
     });
   }
 

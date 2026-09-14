@@ -95,7 +95,7 @@ export async function terminateUserSession(): Promise<
     return { jsonData: {}, ok: true, httpStatus: 204, hadSession: false, dataLayer };
   }
 
-  const response = await callDbTwig<{ errorMessage?: string }>("icam/terminateUserSession");
+  const response = await callDbTwig<{ errorMessage?: string }>("icam/terminateUserSession", undefined, session.sessionId);
   await deleteSessionCookie();
   return { ...response, hadSession: true, dataLayer };
 }
@@ -146,7 +146,8 @@ export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT
     return { rows, total, page: query.page, pageSize: query.pageSize, source: "sample", apiCall: QUERY_API };
   }
 
-  const response = await callDbTwig<{ rows?: OpportunityRowT[]; total?: number; errorMessage?: string }>(QUERY_API, request);
+  const session = await getSessionCookie();
+  const response = await callDbTwig<{ rows?: OpportunityRowT[]; total?: number; errorMessage?: string }>(QUERY_API, request, session?.sessionId);
   if (!response.ok) {
     return {
       rows: [],
@@ -171,7 +172,8 @@ export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT
 
 export async function getBidOpportunity(opportunityId: number): Promise<{ row: OpportunityRowT | null; errorMessage?: string }> {
   if (SAMPLE_MODE) return { row: sampleById(opportunityId) };
-  const response = await callDbTwig<OpportunityRowT & { errorMessage?: string }>(GET_API, { opportunityId });
+  const session = await getSessionCookie();
+  const response = await callDbTwig<OpportunityRowT & { errorMessage?: string }>(GET_API, { opportunityId }, session?.sessionId);
   if (!response.ok) return { row: null, errorMessage: String(response.jsonData?.errorMessage ?? `HTTP ${response.httpStatus}`) };
   return { row: response.jsonData };
 }
