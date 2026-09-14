@@ -22,7 +22,7 @@ export async function createSessionCookie(data: SessionCookieT) {
 
 export async function deleteSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete({ name: SESSION_COOKIE, path: "/" });
   console.log(`[cookie] deleted ${SESSION_COOKIE}`);
 }
 

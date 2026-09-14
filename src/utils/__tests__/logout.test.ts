@@ -123,7 +123,7 @@ describe("logout flow — terminateUserSession", () => {
     expect(result.ok).toBe(false);
     expect(result.hadSession).toBe(true);
     expect(result.httpStatus).toBe(403);
-    expect(deleteMock).toHaveBeenCalledWith("heynav.session");
+    expect(deleteMock).toHaveBeenCalledWith({ name: "heynav.session", path: "/" });
 
     expect(requests).toHaveLength(1);
     expect(requests[0].auth).toBe("Bearer EXPIRED_SESSION_abcdef");
