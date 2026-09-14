@@ -5,8 +5,8 @@
 // call is traced to the server console so you can watch exactly how the API
 // is exercised (method, URL, headers, body, status, timing, payload).
 //
-// Import this only from files marked 'use server'. It reads the session
-// cookie, so it must never be bundled into client components.
+// Import this only from server-side code (Server Components, route handlers,
+// or server-only modules). It must never be bundled into client components.
 
 export type DbTwigResponseT<T = Record<string, unknown>> = {
   jsonData: T;
@@ -34,7 +34,7 @@ function forLog(obj: unknown): unknown {
   if (obj && typeof obj === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      if (k === "password") out[k] = "••••••••";
+      if (k === "password") out[k] = "•••••••";
       else if (k === "sessionId") out[k] = redact(v);
       else if (k === "Authorization" && typeof v === "string")
         out[k] = v.startsWith("Bearer ") ? "Bearer " + redact(v.slice(7)) : v;

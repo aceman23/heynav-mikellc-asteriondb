@@ -1,12 +1,11 @@
-"use server";
-
 // Hey Nav server functions, modelled on vm-manager/src/utils/serverFunctions.ts.
-// Each function is a Next.js Server Action: the browser calls it over an
-// RPC channel, and only this file talks to DbTwig.
+// These are plain server-side functions called from Server Components and
+// route handlers — not Server Actions. Browser interactions go through
+// the route handlers under /api/.
 
 import { callDbTwig, dbTwigBaseUrl } from "./dbTwig";
-import { createSessionCookie, deleteSessionCookie, getSessionCookie } from "./sessionCookie";
-import { evaluateSample, sampleById } from "./opportunitiesSample";
+import { getSessionCookie } from "./sessionCookie";
+import { evaluateSample } from "./opportunitiesSample";
 import { effectiveFilters, type QueryT, type QueryResultT, type OpportunityRowT } from "@/app/workspace/opportunities/queryModel";
 
 export type ServerResponseT<T = Record<string, unknown>> = {
@@ -48,58 +47,6 @@ export async function getLoginPageSettings(): Promise<
   return { ...response, dataLayer: dbTwigBaseUrl(), apiCall: LOGIN_SETTINGS_API };
 }
 
-/**
- * POST icam/createUserSession { identification, password }
- * On success the sessionId is stored in the httpOnly cookie and NOT returned
- * to the browser.
- */
-export async function createUserSession(
-  identification: string,
-  password: string,
-): Promise<ServerResponseT<Omit<UserSessionT, "sessionId">>> {
-  const response = await callDbTwig<UserSessionT>("icam/createUserSession", {
-    identification,
-    password,
-  });
-
-  const { sessionId, ...publicData } = response.jsonData ?? ({} as UserSessionT);
-
-  if (response.ok && sessionId) {
-    const displayName =
-      [publicData.firstName, publicData.lastName].filter(Boolean).join(" ") || identification;
-    await createSessionCookie({
-      sessionId,
-      displayName,
-      emailAddress: publicData.emailAddress ?? null,
-      signedInAt: new Date().toISOString(),
-    });
-  }
-
-  return { jsonData: publicData, ok: response.ok, httpStatus: response.httpStatus };
-}
-
-/**
- * GET icam/terminateUserSession with the Bearer session token.
- * The cookie is always cleared afterwards: if DbTwig rejected the token, the
- * session is already dead on the server side and keeping the cookie would
- * only trap the user in a 403 loop.
- */
-export async function terminateUserSession(): Promise<
-  ServerResponseT<{ errorMessage?: string }> & { hadSession: boolean; dataLayer: string }
-> {
-  const session = await getSessionCookie();
-  const dataLayer = dbTwigBaseUrl();
-
-  if (undefined === session) {
-    console.log("[icam] terminateUserSession skipped — no session cookie present");
-    return { jsonData: {}, ok: true, httpStatus: 204, hadSession: false, dataLayer };
-  }
-
-  const response = await callDbTwig<{ errorMessage?: string }>("icam/terminateUserSession", undefined, session.sessionId);
-  await deleteSessionCookie();
-  return { ...response, hadSession: true, dataLayer };
-}
-
 /** Browser-safe view of the current session, for headers and status panels. */
 export async function getSessionSummary(): Promise<SessionSummaryT | null> {
   const session = await getSessionCookie();
@@ -124,7 +71,6 @@ export async function getSessionSummary(): Promise<SessionSummaryT | null> {
 
 const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
 const QUERY_API = process.env.HEYNAV_QUERY_API ?? "heyNav/queryBidOpportunities";
-const GET_API = process.env.HEYNAV_GET_OPPORTUNITY_API ?? "heyNav/getBidOpportunity";
 
 export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT> {
   // "in" filters also carry a pre-split values[] array for the SQL side.
@@ -168,12 +114,4 @@ export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT
     source: "dbtwig",
     apiCall: QUERY_API,
   };
-}
-
-export async function getBidOpportunity(opportunityId: number): Promise<{ row: OpportunityRowT | null; errorMessage?: string }> {
-  if (SAMPLE_MODE) return { row: sampleById(opportunityId) };
-  const session = await getSessionCookie();
-  const response = await callDbTwig<OpportunityRowT & { errorMessage?: string }>(GET_API, { opportunityId }, session?.sessionId);
-  if (!response.ok) return { row: null, errorMessage: String(response.jsonData?.errorMessage ?? `HTTP ${response.httpStatus}`) };
-  return { row: response.jsonData };
 }
