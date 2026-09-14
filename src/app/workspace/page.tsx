@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { getSessionSummary } from "@/utils/serverQueries";
+import { getSessionSummary } from "@/utils/serverFunctions";
 
 // Dashboard. Nothing here is faked: workspace listing lands with C-1/C-2,
 // so until the heyNav DbTwig service exists this is an honest empty state
@@ -16,9 +16,9 @@ export default async function DashboardPage() {
           <h2>Welcome back, {first}.</h2>
           <p>Every pursuit lives in its own workspace. Start one, or pick up where you left off.</p>
         </div>
-        <Link href="/workspace/workspaces" className="btn primary">
-          <Icon name="plus" />
-          New workspace
+        <Link href="/workspace/opportunities" className="btn primary">
+          <Icon name="search" />
+          Query opportunities
         </Link>
       </div>
 
@@ -47,7 +47,8 @@ export default async function DashboardPage() {
           <dl className="ledger">
             <div><dt>Sign in</dt><dd><span className="status ok">icam/createUserSession</span></dd></div>
             <div><dt>Sign out</dt><dd><span className="status ok">icam/terminateUserSession</span></dd></div>
-            <div><dt>Workspaces</dt><dd><span className="status">heyNav service · not enrolled</span></dd></div>
+            <div><dt>Opportunities</dt><dd><span className="status warn">heyNav/queryBidOpportunities · install db/heynav</span></dd></div>
+            <div><dt>Workspaces</dt><dd><span className="status">C-1 / C-2 · pending</span></dd></div>
             <div><dt>Inference</dt><dd><span className="status">adapter C-7 · pending tenancy</span></dd></div>
           </dl>
         </section>

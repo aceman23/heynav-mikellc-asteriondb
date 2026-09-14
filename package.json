@@ -6,8 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "15.3.1",
@@ -18,12 +17,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5",
-    "vite": "^5.4.21",
-    "vitest": "^2.1.9"
+    "typescript": "^5"
   },
   "engines": {
     "node": ">=20.9"
   },
-  "description": "Hey Nav — governed CUI workspace by MIKE LLC. Next.js front end on the AsterionDB / DbTwig data layer."
+  "description": "Hey Nav \u2014 governed CUI workspace by MIKE LLC. Next.js front end on the AsterionDB / DbTwig data layer."
 }

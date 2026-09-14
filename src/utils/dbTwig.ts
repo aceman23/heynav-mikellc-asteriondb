@@ -1,8 +1,14 @@
 // Server-only transport for AsterionDB's DbTwig middle tier.
 //
-// Pure HTTP transport: callers read the session cookie themselves and pass
-// the sessionId in. This keeps dbTwig.ts free of next/headers so it can be
-// safely imported from both "use server" modules and Server Components.
+// Mirrors vm-manager/src/utils/serverFunctions.ts::callDbTwig from
+// https://github.com/JumpinJackFlash/database-os, with one addition: every
+// call is traced to the server console so you can watch exactly how the API
+// is exercised (method, URL, headers, body, status, timing, payload).
+//
+// Import this only from files marked 'use server'. It reads the session
+// cookie, so it must never be bundled into client components.
+
+import { getSessionCookie } from "./sessionCookie";
 
 export type DbTwigResponseT<T = Record<string, unknown>> = {
   jsonData: T;
@@ -33,7 +39,7 @@ function forLog(obj: unknown): unknown {
       if (k === "password") out[k] = "••••••••";
       else if (k === "sessionId") out[k] = redact(v);
       else if (k === "Authorization" && typeof v === "string")
-        out[k] = v.startsWith("Bearer ") && v !== "Bearer null" ? "Bearer " + redact(v.slice(7)) : v;
+        out[k] = v.startsWith("Bearer ") ? "Bearer " + redact(v.slice(7)) : v;
       else out[k] = forLog(v);
     }
     return out;
@@ -43,21 +49,33 @@ function forLog(obj: unknown): unknown {
 
 export async function callDbTwig<T = Record<string, unknown>>(
   apiCall: string,
-  options?: { body?: object; sessionId?: string },
+  body?: object,
 ): Promise<DbTwigResponseT<T>> {
+  const session = await getSessionCookie();
+
+  // DbTwig validates the session on every call by taking whatever follows
+  // "Bearer " and converting it to a RAW session id inside the database.
+  // Before login there is no session, so the header must be OMITTED —
+  // sending "Bearer null" (as the vm-manager reference does) makes ICAM
+  // fail with ORA-06502 "hex to raw conversion error" on cloud-test.
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (options?.sessionId) headers.Authorization = "Bearer " + options.sessionId;
+  if (session?.sessionId) headers.Authorization = "Bearer " + session.sessionId;
 
   const requestOptions: RequestInit =
-    options?.body !== undefined
-      ? { method: "POST", headers, body: JSON.stringify(options.body), cache: "no-store" }
+    undefined !== body
+      ? { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" }
       : { method: "GET", headers, cache: "no-store" };
 
   const url = DB_TWIG_URL + "/" + apiCall;
   const startedAt = Date.now();
 
   console.log(
-    `[dbTwig →] ${requestOptions.method} ${url} | headerKeys=${JSON.stringify(Object.keys(headers))} | Authorization=${headers.Authorization ? "present" : "absent"}`,
+    `[dbTwig →] ${requestOptions.method} ${url}`,
+    JSON.stringify(
+      { auth: session ? "bearer session" : "anonymous (no Authorization header)", headers: forLog(headers), body: body ? forLog(body) : undefined },
+      null,
+      2,
+    ),
   );
 
   let httpResponse: Response;
@@ -72,6 +90,7 @@ export async function callDbTwig<T = Record<string, unknown>>(
     };
   }
 
+  // DbTwig normally answers JSON, but proxies and 5xx pages may not.
   const rawText = await httpResponse.text();
   let jsonData: T;
   try {

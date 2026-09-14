@@ -12,8 +12,7 @@ type EndStateT =
   | { phase: "failed"; message: string; httpStatus: number; dataLayer: string; at: string };
 
 // /logout is a real screen: it terminates the DbTwig session on arrival,
-// then shows a receipt with session and platform details. Reaching it
-// with no session is a harmless no-op.
+// then shows a receipt. Reaching it with no session is a harmless no-op.
 export default function LogoutPage() {
   const [state, setState] = useState<EndStateT>({ phase: "closing" });
   const ran = useRef(false); // React strict mode mounts twice in dev
@@ -79,58 +78,33 @@ export default function LogoutPage() {
           )}
 
           {state.phase !== "closing" && (
-            <>
-              <dl className="ledger" aria-label="Sign-out receipt">
-                <div>
-                  <dt>Data layer</dt>
-                  <dd>{host}</dd>
-                </div>
-                <div>
-                  <dt>Sign-out call</dt>
-                  <dd>
-                    <span className={`status ${state.phase === "closed" ? "ok" : "warn"}`}>
-                      icam/terminateUserSession · {state.httpStatus === 204 ? "skipped" : `HTTP ${state.httpStatus || "—"}`}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Local cookie</dt>
-                  <dd>cleared</dd>
-                </div>
-                <div>
-                  <dt>Time</dt>
-                  <dd>{state.at}</dd>
-                </div>
-              </dl>
-
-              <div className="end-info">
-                <section className="end-info-panel" aria-labelledby="session-info-title">
-                  <h3 id="session-info-title">Session</h3>
-                  <dl className="ledger">
-                    <div><dt>Sign in</dt><dd><span className="status ok">icam/createUserSession</span></dd></div>
-                    <div><dt>Sign out</dt><dd><span className="status ok">icam/terminateUserSession</span></dd></div>
-                    <div><dt>Token storage</dt><dd>httpOnly cookie, server-side only</dd></div>
-                  </dl>
-                </section>
-
-                <section className="end-info-panel" aria-labelledby="platform-info-title">
-                  <h3 id="platform-info-title">Platform</h3>
-                  <dl className="ledger">
-                    <div><dt>Data layer</dt><dd>{host || "—"}</dd></div>
-                    <div><dt>Front end</dt><dd>Next.js · Hey Nav</dd></div>
-                    <div><dt>Operator</dt><dd>MIKE LLC</dd></div>
-                  </dl>
-                </section>
+            <dl className="ledger" aria-label="Sign-out receipt">
+              <div>
+                <dt>Data layer</dt>
+                <dd>{host}</dd>
               </div>
-            </>
+              <div>
+                <dt>Call</dt>
+                <dd>
+                  <span className={`status ${state.phase === "closed" ? "ok" : "warn"}`}>
+                    icam/terminateUserSession · {state.httpStatus === 204 ? "skipped" : `HTTP ${state.httpStatus || "—"}`}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>Local cookie</dt>
+                <dd>cleared</dd>
+              </div>
+              <div>
+                <dt>Time</dt>
+                <dd>{state.at}</dd>
+              </div>
+            </dl>
           )}
 
           <div className="actions">
             <Link href="/login" className="btn gold" style={{ marginTop: 0 }}>
               Sign in again
-            </Link>
-            <Link href="/login" className="btn quiet" style={{ marginTop: 0 }}>
-              Back to login
             </Link>
           </div>
         </div>

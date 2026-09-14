@@ -17,6 +17,12 @@ const PATHS: Record<string, string> = {
   chevron: "M4.5 6.5 8 10l3.5-3.5",
   signout: "M6 2.5H3v11h3M10 5l3 3-3 3M13 8H6.5",
   plus: "M8 3v10M3 8h10",
+  search: "M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM10.6 10.6 14 14",
+  x: "M4 4l8 8M12 4l-8 8",
+  chevronL: "M10 3.5 5.5 8 10 12.5",
+  chevronR: "M6 3.5 10.5 8 6 12.5",
+  external: "M9 3h4v4M13 3 7 9M11 9v4H3V5h4",
+  upload: "M8 11V3M4.5 6.5 8 3l3.5 3.5M3 13h10",
 };
 
 export function Icon({ name, size = 16 }: { name: string; size?: number }) {

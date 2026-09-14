@@ -17,6 +17,7 @@ export const NAV: NavGroupT[] = [
     label: "Pursuits",
     items: [
       { slug: "", label: "Home", icon: "home", description: "Your pursuits, recent activity, and session." },
+      { slug: "opportunities", label: "Opportunities", icon: "search", description: "Query the SAM.gov bid opportunities feed on every field." },
       { slug: "workspaces", label: "Workspaces", icon: "folder", description: "One workspace per pursuit, each with its ten governed object types.", sprint: "C-1 / C-2 · Sprints 1–2" },
       { slug: "library", label: "Library", icon: "book", description: "Past performance, rates, win themes, certifications, and teaming documents.", sprint: "C-6 · Sprints 1–2" },
     ],
@@ -35,7 +36,7 @@ export const NAV: NavGroupT[] = [
     label: "Governance",
     items: [
       { slug: "share", label: "Share", icon: "share", description: "Invite a teaming partner into one pursuit with a defined scope — never the corporate library.", sprint: "E-2 · Sprints 5–6" },
-      { slug: "vault", label: "Vault", icon: "vault", description: "All CUI at rest, organized by contract and category, with retention and legal hold.", sprint: "V-1 – V-5 · Sprint 9" },
+      { slug: "vault", label: "Vault", icon: "vault", description: "Upload documents into the bunker as governed objects; browse and retention come with V-1 – V-5.", sprint: "V-1 – V-5 · Sprint 9" },
       { slug: "evidence", label: "Evidence", icon: "evidence", description: "Dated evidence pack and Customer Responsibility Matrix mapped to NIST SP 800-171.", sprint: "G-2 · Sprints 7–8" },
       { slug: "audit", label: "Audit", icon: "audit", description: "Who accessed which object, when — from the database-tier audit stream.", sprint: "E-5 · Sprints 5–6" },
     ],

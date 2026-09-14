@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createUserSession } from "@/utils/serverFunctions";
 
 export function LoginForm({
   nextPath,
@@ -31,36 +32,7 @@ export function LoginForm({
     console.log("[login] createUserSession →", { identification, password: "••••••••" });
 
     startTransition(async () => {
-      let response: {
-        ok: boolean;
-        httpStatus: number;
-        jsonData?: { errorMessage?: string };
-      };
-
-      try {
-        const result = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identification, password }),
-        });
-        const rawResponse = await result.text();
-        try {
-          response = JSON.parse(rawResponse) as typeof response;
-        } catch {
-          response = {
-            ok: false,
-            httpStatus: result.status,
-            jsonData: { errorMessage: "The sign-in request returned an unexpected response." },
-          };
-        }
-      } catch {
-        response = {
-          ok: false,
-          httpStatus: 0,
-          jsonData: { errorMessage: "The sign-in service could not be reached." },
-        };
-      }
-
+      const response = await createUserSession(identification, password);
       console.log("[login] createUserSession ←", response.httpStatus, response);
 
       if (response.ok) {

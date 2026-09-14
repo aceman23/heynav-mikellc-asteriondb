@@ -1,8 +1,7 @@
-import Image from "next/image";
 import { MarkingBar } from "../components/MarkingBar";
 import { Wordmark } from "../components/Wordmark";
 import { LoginForm } from "./LoginForm";
-import { getLoginPageSettings } from "@/utils/serverQueries";
+import { getLoginPageSettings } from "@/utils/serverFunctions";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +79,6 @@ export default async function LoginPage({
 
             <p className="help">Need access or locked out? Ask your workspace administrator — accounts are created inside your boundary, not by MIKE LLC.</p>
             <p className="foot">MIKE LLC · SDVOSB · CAGE 10KA6 · Powered by AsterionDB</p>
-            <Image src="/AsterionDBLogo350x75.png" alt="AsterionDB" width={175} height={38} className="asterion-logo" />
           </div>
         </section>
       </div>

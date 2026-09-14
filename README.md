@@ -1,13 +1,9 @@
-# Hey Nav powered by AsterionDB
-
-<img width="1280" height="800" alt="heynav-login-preview" src="https://github.com/user-attachments/assets/26304b47-2bed-43ce-8e3f-73322dd2a884" />
-
-
+# Hey Nav
 
 Front end for **Hey Nav**, MIKE LLC's governed CUI workspace, built on the
 [AsterionDB](https://asteriondb.com) data-layer architecture. This repository currently
 contains the sign-in / sign-out flow and the signed-in application shell (sidebar navigation,
-profile menu, dashboard). The seven simulated product functions are stubbed and will be wired to DbTwig as
+profile menu, dashboard). The seven product functions are stubbed and will be wired to DbTwig as
 their build cards land.
 
 The application follows the `vm-manager` reference in
@@ -46,6 +42,10 @@ endpoints or secrets.
 | `DB_TWIG_URL` | `https://cloud-test.asteriondb.com/dbTwig` | DbTwig endpoint of the AsterionDB instance |
 | `DB_TWIG_LOGIN_SETTINGS_API` | `dgBunker/getLoginPageSettings` | Anonymous call made when the login page renders. Change to the Hey Nav service once it is enrolled in DbTwig. |
 | `DB_TWIG_LOG_SECRETS` | `0` | `1` prints full session ids in the server log instead of a redacted prefix |
+| `HEYNAV_SAMPLE_DATA` | `0` | `1` evaluates opportunity queries in-memory over marked sample rows (UI testing before the `heyNav` service exists) |
+| `HEYNAV_QUERY_API` | `heyNav/queryBidOpportunities` | DbTwig API for the opportunities query |
+| `HEYNAV_GET_OPPORTUNITY_API` | `heyNav/getBidOpportunity` | DbTwig API for one opportunity incl. description |
+| `HEYNAV_UPLOAD_API` | `dgBunker/uploadFiles` | Multipart upload entry point used by `/api/upload` |
 | `PORT` | `3000` | Port for `npm start` / the container |
 
 ## Watching the API calls
@@ -75,7 +75,9 @@ sanitized responses.
 | `/` | Redirects by session state | — |
 | `/login` | Sign-in screen | `GET  <DB_TWIG_LOGIN_SETTINGS_API>` on render; `POST icam/createUserSession` on submit |
 | `/workspace` | Dashboard inside the app shell | — (protected) |
+| `/workspace/opportunities` | Query screen over `bid_opportunities` — every column filterable, sortable, choosable; URL is the query | `POST heyNav/queryBidOpportunities`; row click → `POST heyNav/getBidOpportunity` |
 | `/workspace/<slug>` | Placeholder for each function (ask, shred, comply, draft, red-team, share, vault, evidence, audit, workspaces, library, settings) | — (protected) |
+| `/workspace/vault` | Upload files into the bunker with per-file progress | `POST dgBunker/uploadFiles` (multipart, via `/api/upload`) |
 | `/logout` | Terminates the session, shows a receipt | `GET icam/terminateUserSession`, then the cookie is cleared |
 
 `middleware.ts` sends anonymous requests for `/workspace/*` to `/login?next=…` and sends
@@ -140,6 +142,33 @@ subnet next to the AsterionDB database, behind the customer's load balancer. Do 
 hosted Next.js platform — the server holds live database sessions and would move CUI outside the
 boundary.
 
+## Opportunities query screen
+
+`/workspace/opportunities` queries the SAM.gov-shaped `bid_opportunities` table. All 50
+columns are queryable: the field catalog in `src/app/workspace/opportunities/fields.ts` gives
+each column a type (text, number, date, timestamp, flag, clob) which determines its operators.
+Filters AND together; a quick-search box matches the identifying text columns; columns are
+choosable and sortable; the URL encodes the whole query so results can be bookmarked or shared.
+
+The database side lives in `db/heynav/` (see its README for the API contract and install).
+Until that service is installed, set `HEYNAV_SAMPLE_DATA=1` to drive the screen from a small
+set of rows marked `SAMPLE-*`; the results bar flags this so nobody mistakes it for the feed.
+
+## File uploads (Vault)
+
+Uploads follow the reference dgBunker client: a multipart form with `name`, `lastModified`,
+`size`, `newVersion` (`Y`/`N`), `objectId` (when replacing a version), and `file`, posted to
+`dgBunker/uploadFiles` with the session bearer. Because the session id lives only in the
+httpOnly cookie, the browser posts to `/api/upload` (`src/app/api/upload/route.ts`), which adds
+the header and forwards the body unchanged. `src/utils/upload.ts` is the browser helper —
+`uploadFile(file, { newVersionOf, onProgress })` — and `UploadDropzone` is the drag-and-drop
+component. Progress events come from the browser→server leg; the server→DbTwig leg is logged
+in the terminal like every other call.
+
+Route handlers don't have the server-action body limit, but very large files are buffered in
+memory on the Next.js server before forwarding; if multi-GB uploads are expected, switch the
+handler to stream the request body.
+
 ## Adding a new page
 
 1. Add an entry to `NAV` in `src/app/workspace/nav.ts` (label, icon, description, build card).
@@ -151,6 +180,12 @@ boundary.
    server-side.
 
 ## Troubleshooting
+
+- **HTTP 500 with `ORA-06502 … hex to raw conversion error` in `DBTWIG_ICAM.ICAM`** — DbTwig
+  received an `Authorization: Bearer …` header whose value is not a hex session id (typically
+  `Bearer null` on an anonymous call). Anonymous calls must send no `Authorization` header at
+  all; `src/utils/dbTwig.ts` already does this. If you see it, check that nothing else (a proxy,
+  a fetch wrapper) is adding the header.
 
 - **Login page shows "Settings call … unreachable" / HTTP 0** — the server cannot reach
   `DB_TWIG_URL`. Check the URL, DNS, and any egress proxy. The sign-in form still renders.
