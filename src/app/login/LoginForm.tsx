@@ -1,39 +1,26 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+
 type LoginResponseT = {
   jsonData?: { errorMessage?: string };
   ok: boolean;
   httpStatus: number;
 };
 
-export function LoginForm({
-  nextPath,
-  settings,
-}: {
-  nextPath?: string;
-  settings: Record<string, unknown>;
-}) {
+export function LoginForm({ nextPath, settings }: { nextPath?: string; settings: Record<string, unknown> }) {
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<{ message: string; status: number } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [identification, setIdentification] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState<{ message: string; status: number } | null>(null);
 
-  useEffect(() => {
-    // Browser-side view of what the login page received from DbTwig.
-    console.log("[login] getLoginPageSettings →", settings);
-  }, [settings]);
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pending) return;
     setError(null);
-
-    const form = new FormData(event.currentTarget);
-    const identification = String(form.get("identification") ?? "").trim();
-    const password = String(form.get("password") ?? "");
-
-    console.log("[login] createUserSession →", { identification, password: "••••••••" });
 
     startTransition(async () => {
       try {
@@ -65,7 +52,7 @@ export function LoginForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate={false}>
+    <form onSubmit={handleSubmit} autoComplete="on">
       <div className="field">
         <label htmlFor="identification">Identification</label>
         <div className="control">
@@ -74,9 +61,10 @@ export function LoginForm({
             name="identification"
             type="text"
             autoComplete="username"
-            placeholder="Username or email"
             required
-            autoFocus
+            value={identification}
+            onChange={(e) => setIdentification(e.target.value)}
+            placeholder={typeof settings.identificationHint === "string" ? settings.identificationHint : "Your workspace identification"}
           />
         </div>
       </div>
@@ -87,19 +75,14 @@ export function LoginForm({
           <input
             id="password"
             name="password"
-            type={showPassword ? "text" : "password"}
+            type={showPw ? "text" : "password"}
             autoComplete="current-password"
-            placeholder="Password"
             required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
-          <button
-            type="button"
-            className="reveal"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-pressed={showPassword}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? "Hide" : "Show"}
+          <button type="button" className="reveal" onClick={() => setShowPw((v) => !v)}>
+            {showPw ? "Hide" : "Show"}
           </button>
         </div>
       </div>
@@ -107,12 +90,12 @@ export function LoginForm({
       {error && (
         <div className="error" role="alert">
           {error.message}
-          <span className="code">icam/createUserSession · HTTP {error.status || "no response"}</span>
+          <span className="code">HTTP {error.status}</span>
         </div>
       )}
 
       <button type="submit" className="btn" disabled={pending}>
-        {pending ? "Opening session…" : "Sign in"}
+        {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );
