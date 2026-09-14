@@ -64,7 +64,6 @@ describe("logout flow — terminateUserSession", () => {
             signedInAt: "2026-09-10T12:00:00.000Z",
           }),
         }),
-        set: vi.fn(),
         delete: vi.fn(),
       }),
     }));
@@ -88,7 +87,6 @@ describe("logout flow — terminateUserSession", () => {
     vi.doMock("next/headers", () => ({
       cookies: async () => ({
         get: () => undefined,
-        set: vi.fn(),
         delete: vi.fn(),
       }),
     }));
@@ -115,8 +113,7 @@ describe("logout flow — terminateUserSession", () => {
             signedInAt: "2026-09-10T12:00:00.000Z",
           }),
         }),
-        set: deleteMock,
-        delete: vi.fn(),
+        delete: deleteMock,
       }),
     }));
 
@@ -126,7 +123,7 @@ describe("logout flow — terminateUserSession", () => {
     expect(result.ok).toBe(false);
     expect(result.hadSession).toBe(true);
     expect(result.httpStatus).toBe(403);
-    expect(deleteMock).toHaveBeenCalledWith("heynav.session", "", expect.objectContaining({ maxAge: 0 }));
+    expect(deleteMock).toHaveBeenCalledWith("heynav.session");
 
     expect(requests).toHaveLength(1);
     expect(requests[0].auth).toBe("Bearer EXPIRED_SESSION_abcdef");
