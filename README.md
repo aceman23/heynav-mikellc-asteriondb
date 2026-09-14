@@ -11,7 +11,7 @@ their build cards land.
 
 The application follows the `vm-manager` reference in
 [JumpinJackFlash/database-os](https://github.com/JumpinJackFlash/database-os): the browser only
-calls Next.js Server Actions; those call DbTwig with a `Bearer <sessionId>` header read from an
+calls Next.js route handlers under `/api/`; those call DbTwig with a `Bearer <sessionId>` header read from an
 httpOnly cookie. The session id never reaches the browser.
 
 ## Prerequisites

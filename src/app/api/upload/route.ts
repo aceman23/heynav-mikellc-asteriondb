@@ -22,6 +22,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.formData();
+  if (!(body.get("file") instanceof File)) {
+    return NextResponse.json({ errorMessage: "No file in the upload." }, { status: 400 });
+  }
   const response = await callDbTwig<Record<string, unknown>>(
     UPLOAD_API,
     body,

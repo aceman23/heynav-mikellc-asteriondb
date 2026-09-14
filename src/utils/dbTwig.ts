@@ -45,20 +45,33 @@ function forLog(obj: unknown): unknown {
   return obj;
 }
 
+function describeMultipart(fd: FormData) {
+  const fields: Record<string, string> = {};
+  for (const [k, v] of fd.entries()) {
+    fields[k] = v instanceof File ? `<file ${v.name}, ${v.size} bytes, ${v.type || "unknown type"}>` : String(v);
+  }
+  return { multipart: fields };
+}
+
 export async function callDbTwig<T = Record<string, unknown>>(
   apiCall: string,
-  body?: object,
+  body?: object | FormData,
   sessionId?: string,
 ): Promise<DbTwigResponseT<T>> {
   // DbTwig validates the session on every call by taking whatever follows
   // "Bearer " and converting it to a RAW session id inside the database.
   // Before login there is no session, so the header must be OMITTED.
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {};
   if (sessionId) headers.Authorization = "Bearer " + sessionId;
+
+  // Multipart bodies (dgBunker/uploadFiles) go out as-is; fetch sets the
+  // Content-Type with the boundary. Everything else is JSON.
+  const isMultipart = typeof FormData !== "undefined" && body instanceof FormData;
+  if (!isMultipart) headers["Content-Type"] = "application/json";
 
   const requestOptions: RequestInit =
     undefined !== body
-      ? { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" }
+      ? { method: "POST", headers, body: isMultipart ? body : JSON.stringify(body), cache: "no-store" }
       : { method: "GET", headers, cache: "no-store" };
 
   const url = DB_TWIG_URL + "/" + apiCall;
@@ -67,7 +80,7 @@ export async function callDbTwig<T = Record<string, unknown>>(
   console.log(
     `[dbTwig →] ${requestOptions.method} ${url}`,
     JSON.stringify(
-      { auth: sessionId ? "bearer session" : "anonymous (no Authorization header)", headers: forLog(headers), body: body ? forLog(body) : undefined },
+      { auth: sessionId ? "bearer session" : "anonymous (no Authorization header)", headers: forLog(headers), body: isMultipart ? describeMultipart(body as FormData) : body ? forLog(body) : undefined },
       null,
       2,
     ),

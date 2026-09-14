@@ -14,14 +14,14 @@ import { callDbTwig } from "../dbTwig";
 import { deleteSessionCookie, getSessionCookie } from "../sessionCookie";
 
 type MockCookieStore = {
-  get: ReturnType<typeof vi.fn>;
+  get: (name: string) => { value: string } | undefined;
   set: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
 };
 
 function mockCookies(store: Partial<MockCookieStore> = {}) {
   const full: MockCookieStore = {
-    get: store.get ?? vi.fn(() => undefined),
+    get: store.get ?? (() => undefined),
     set: store.set ?? vi.fn(),
     delete: store.delete ?? vi.fn(),
   };
