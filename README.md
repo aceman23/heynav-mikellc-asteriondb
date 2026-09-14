@@ -1,4 +1,7 @@
-# Hey Nav
+# Hey Nav powered by AsterionDB
+
+<img width="1280" height="800" alt="heynav-login-preview" src="https://github.com/user-attachments/assets/124e6a8e-970b-4080-a785-cc64f02b10f2" />
+
 
 Front end for **Hey Nav**, MIKE LLC's governed CUI workspace, built on the
 [AsterionDB](https://asteriondb.com) data-layer architecture. This repository currently
