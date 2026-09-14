@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Icon } from "../Icon";
 import { FIELD_BY_KEY, GROUPS, FIELDS } from "./fields";
 import { PAGE_SIZES, type QueryT, type QueryResultT, type OpportunityRowT } from "./queryModel";
-import { getBidOpportunity } from "@/utils/serverFunctions";
 
 function fmt(key: string, v: string | number | null | undefined): string {
   if (v == null || v === "") return "—";
@@ -36,10 +35,22 @@ export function ResultsTable({
     const id = Number(row.opportunityId);
     setLoadingId(id);
     console.log("[opportunities] getBidOpportunity →", id);
-    const { row: full, errorMessage } = await getBidOpportunity(id);
-    console.log("[opportunities] getBidOpportunity ←", full ? "ok" : errorMessage);
+    try {
+      const httpResponse = await fetch(`/api/opportunities/${id}`);
+      const data = (await httpResponse.json()) as Record<string, unknown>;
+      if (httpResponse.ok && !data.errorMessage) {
+        const full = data as OpportunityRowT;
+        console.log("[opportunities] getBidOpportunity ← ok");
+        setOpen(full);
+      } else {
+        console.log("[opportunities] getBidOpportunity ←", String(data.errorMessage ?? httpResponse.statusText));
+        setOpen(row);
+      }
+    } catch {
+      console.log("[opportunities] getBidOpportunity ← network error");
+      setOpen(row);
+    }
     setLoadingId(null);
-    setOpen(full ?? row);
   }
 
   useEffect(() => {
