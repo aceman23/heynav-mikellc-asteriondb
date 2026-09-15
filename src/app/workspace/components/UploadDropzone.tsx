@@ -19,17 +19,14 @@ function fmtBytes(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// Pulls the object id out of whatever shape dgBunker returns; logged in full
-// in the browser console either way.
+// dgBunker/uploadFiles returns { objectId } (confirmed). Missing id on a 2xx
+// is logged as a warning so a contract drift is visible immediately.
+export type UploadResponseT = { objectId: string; errorMessage?: string };
+
 export function objectIdFrom(jsonData: Record<string, unknown>): string | null {
-  const direct = jsonData.objectId ?? jsonData.object_id;
-  if (typeof direct === "string" || typeof direct === "number") return String(direct);
-  const list = jsonData.objects ?? jsonData.files;
-  if (Array.isArray(list) && list[0] && typeof list[0] === "object") {
-    const first = list[0] as Record<string, unknown>;
-    const id = first.objectId ?? first.object_id;
-    if (typeof id === "string" || typeof id === "number") return String(id);
-  }
+  const id = (jsonData as Partial<UploadResponseT>).objectId;
+  if (typeof id === "string" || typeof id === "number") return String(id);
+  console.warn("[upload] uploadFiles response has no objectId:", jsonData);
   return null;
 }
 

@@ -116,7 +116,7 @@ public/mike-llc-logo.png
 ## Scripts
 
 | Command | Purpose |
-| --- | --- |
+| --- | --- | --- |
 | `npm run dev` | Development server with hot reload |
 | `npm run typecheck` | TypeScript check without emitting |
 | `npm run build` | Production build (`.next/standalone`) |
@@ -153,7 +153,8 @@ each column a type (text, number, date, timestamp, flag, clob) which determines 
 Filters AND together; a quick-search box matches the identifying text columns; columns are
 choosable and sortable; the URL encodes the whole query so results can be bookmarked or shared.
 
-The database side lives in `db/heynav/` (see its README for the API contract and install).
+The API contract the screen is built against is in `docs/heynav-api-contract.md`; `db/heynav/` is a
+reference PL/SQL implementation of it (see its README for install).
 Until that service is installed, set `HEYNAV_SAMPLE_DATA=1` to drive the screen from a small
 set of rows marked `SAMPLE-*`; the results bar flags this so nobody mistakes it for the feed.
 
