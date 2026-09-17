@@ -5,7 +5,7 @@
 
 import { callDbTwig, dbTwigBaseUrl } from "./dbTwig";
 import { getSessionCookie } from "./sessionCookie";
-import { evaluateSample } from "./opportunitiesSample";
+import { evaluateSample, sampleSetFlags, sampleGetDocuments, sampleAttachDocument, sampleAskQuestion, type SampleDocumentT } from "./opportunitiesSample";
 import { effectiveFilters, type QueryT, type QueryResultT, type OpportunityRowT } from "@/app/workspace/opportunities/queryModel";
 
 export type ServerResponseT<T = Record<string, unknown>> = {
@@ -114,4 +114,110 @@ export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT
     source: "dbtwig",
     apiCall: QUERY_API,
   };
+}
+
+// ---- Triage flags ----------------------------------------------------------
+
+const SET_FLAGS_API = process.env.HEYNAV_SET_FLAGS_API ?? "heyNav/setOpportunityFlags";
+
+export type FlagResultT = {
+  opportunityId: number;
+  flaggedByUser: string;
+  rejectedByUser: string;
+  errorMessage?: string;
+};
+
+export async function setOpportunityFlags(
+  opportunityId: number,
+  flags: { flaggedByUser?: string; rejectedByUser?: string },
+): Promise<FlagResultT> {
+  if (SAMPLE_MODE) {
+    const result = sampleSetFlags(opportunityId, flags);
+    if (!result) return { opportunityId, flaggedByUser: "N", rejectedByUser: "N", errorMessage: "Opportunity not found." };
+    return result;
+  }
+  const session = await getSessionCookie();
+  const response = await callDbTwig<FlagResultT & { errorMessage?: string }>(
+    SET_FLAGS_API,
+    { opportunityId, ...flags },
+    session?.sessionId,
+  );
+  if (!response.ok) {
+    return { opportunityId, flaggedByUser: "N", rejectedByUser: "N", errorMessage: response.jsonData?.errorMessage ?? `HTTP ${response.httpStatus}` };
+  }
+  return response.jsonData;
+}
+
+// ---- Documents -------------------------------------------------------------
+
+export type DocumentT = SampleDocumentT;
+
+const ATTACH_DOCUMENT_API = process.env.HEYNAV_ATTACH_DOCUMENT_API ?? "heyNav/attachDocument";
+const GET_DOCUMENTS_API = process.env.HEYNAV_GET_DOCUMENTS_API ?? "heyNav/getDocuments";
+
+export async function attachDocument(params: {
+  objectId: string;
+  opportunityId: number | null;
+  displayName: string;
+  documentType: string;
+  size: number;
+}): Promise<DocumentT & { errorMessage?: string }> {
+  if (SAMPLE_MODE) {
+    return sampleAttachDocument(params);
+  }
+  const session = await getSessionCookie();
+  const response = await callDbTwig<DocumentT & { errorMessage?: string }>(
+    ATTACH_DOCUMENT_API,
+    params,
+    session?.sessionId,
+  );
+  return response.jsonData;
+}
+
+export async function getDocuments(opportunityId: number | null): Promise<{ documents: DocumentT[]; errorMessage?: string }> {
+  if (SAMPLE_MODE) {
+    return { documents: sampleGetDocuments(opportunityId) };
+  }
+  const session = await getSessionCookie();
+  const response = await callDbTwig<{ documents?: DocumentT[]; errorMessage?: string }>(
+    GET_DOCUMENTS_API,
+    { opportunityId },
+    session?.sessionId,
+  );
+  if (!response.ok) {
+    return { documents: [], errorMessage: response.jsonData?.errorMessage ?? `HTTP ${response.httpStatus}` };
+  }
+  return { documents: response.jsonData.documents ?? [] };
+}
+
+// ---- Ask (RAG) -------------------------------------------------------------
+
+const ASK_API = process.env.HEYNAV_ASK_API ?? "heyNav/askQuestion";
+
+export type CitationT = {
+  objectId: string;
+  displayName: string;
+  snippet: string;
+};
+
+export type AskResultT = {
+  answer: string;
+  citations: CitationT[];
+  errorMessage?: string;
+};
+
+export async function askQuestion(question: string, opportunityId: number | null): Promise<AskResultT> {
+  if (SAMPLE_MODE) {
+    return sampleAskQuestion(question, opportunityId);
+  }
+  const session = await getSessionCookie();
+  const response = await callDbTwig<AskResultT & { errorMessage?: string }>(
+    ASK_API,
+    { question, opportunityId },
+    session?.sessionId,
+  );
+  if (!response.ok) {
+    return { answer: "", citations: [], errorMessage: response.jsonData?.errorMessage ?? `HTTP ${response.httpStatus}` };
+  }
+  return response.jsonData;
 }

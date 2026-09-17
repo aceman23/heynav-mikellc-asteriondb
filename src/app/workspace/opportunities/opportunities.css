@@ -82,6 +82,30 @@
 .drawer-desc h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--navy); margin-bottom: 8px; }
 .drawer-desc p { white-space: pre-wrap; font-size: 15px; }
 
+/* Triage buttons */
+.triage { display: flex; gap: 10px; margin: 16px 0 4px; }
+.triage-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--white); color: var(--navy); cursor: pointer;
+  font-family: var(--display); font-weight: 600; font-size: 13px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.triage-btn:hover { border-color: var(--navy); background: var(--paper2); }
+.triage-btn.active.flag { background: rgba(62, 124, 89, 0.12); border-color: var(--go); color: var(--go); }
+.triage-btn.active.reject { background: rgba(194, 71, 47, 0.12); border-color: var(--signal); color: var(--signal); }
+.triage-btn[disabled] { opacity: 0.6; cursor: progress; }
+
+/* Documents in drawer */
+.drawer-docs { margin-top: 20px; }
+.drawer-docs h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--navy); margin-bottom: 8px; }
+.doc-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.doc-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line2); border-radius: 6px; background: var(--white); }
+.doc-item svg { color: var(--steel); flex: none; }
+.doc-name { font-family: var(--display); font-weight: 600; font-size: 13.5px; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-upload { margin-top: 12px; }
+.doc-upload .btn.quiet { display: inline-flex; gap: 6px; }
+
 @media (max-width: 900px) {
   .qb-row, .qb-row:has(.qb-and) { grid-template-columns: 1fr 1fr; }
   .qb-row .icon-btn { grid-column: 2; justify-self: end; }

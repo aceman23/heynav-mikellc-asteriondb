@@ -1,9 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "../Icon";
 import { FIELD_BY_KEY, GROUPS, FIELDS } from "./fields";
 import { PAGE_SIZES, type QueryT, type QueryResultT, type OpportunityRowT } from "./queryModel";
+
+type DocT = {
+  objectId: string;
+  opportunityId: number | null;
+  displayName: string;
+  documentType: string;
+  size: number;
+  uploadedBy: string;
+  uploadedAt: string;
+};
+
+function fmtBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
 
 function fmt(key: string, v: string | number | null | undefined): string {
   if (v == null || v === "") return "—";
@@ -141,6 +157,77 @@ export function ResultsTable({
 }
 
 function Detail({ row, onClose }: { row: OpportunityRowT; onClose: () => void }) {
+  const opportunityId = Number(row.opportunityId);
+  const [flagged, setFlagged] = useState<string>(String(row.flaggedByUser ?? "N"));
+  const [rejected, setRejected] = useState<string>(String(row.rejectedByUser ?? "N"));
+  const [flagPending, setFlagPending] = useState(false);
+  const [docs, setDocs] = useState<DocT[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDocsLoading(true);
+    fetch(`/api/documents?opportunityId=${opportunityId}`)
+      .then((r) => r.json())
+      .then((data: { documents?: DocT[]; errorMessage?: string }) => {
+        if (!cancelled && data.documents) setDocs(data.documents);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setDocsLoading(false); });
+    return () => { cancelled = true; };
+  }, [opportunityId]);
+
+  async function toggleFlag(field: "flaggedByUser" | "rejectedByUser", current: string) {
+    const next = current === "Y" ? "N" : "Y";
+    setFlagPending(true);
+    const patch: Record<string, string> = { [field]: next };
+    if (field === "flaggedByUser" && next === "Y") { patch.rejectedByUser = "N"; setRejected("N"); }
+    if (field === "rejectedByUser" && next === "Y") { patch.flaggedByUser = "N"; setFlagged("N"); }
+    try {
+      const res = await fetch(`/api/opportunities/${opportunityId}/flags`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json() as { flaggedByUser?: string; rejectedByUser?: string; errorMessage?: string };
+      if (res.ok && !data.errorMessage) {
+        if (data.flaggedByUser) setFlagged(data.flaggedByUser);
+        if (data.rejectedByUser) setRejected(data.rejectedByUser);
+      }
+    } catch { /* ignore */ }
+    setFlagPending(false);
+  }
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    try {
+      const { uploadFile } = await import("@/utils/upload");
+      const result = await uploadFile(file);
+      if (result.ok) {
+        const objectId = (result.jsonData as { objectId?: string }).objectId ?? null;
+        if (objectId) {
+          await fetch("/api/documents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              objectId,
+              opportunityId,
+              displayName: file.name,
+              documentType: "attachment",
+              size: file.size,
+            }),
+          });
+          const res = await fetch(`/api/documents?opportunityId=${opportunityId}`);
+          const data = await res.json() as { documents?: DocT[] };
+          if (data.documents) setDocs(data.documents);
+        }
+      }
+    } catch { /* ignore */ }
+    setUploading(false);
+  }
+
   return (
     <>
       <button className="drawer-scrim" aria-label="Close details" onClick={onClose} />
@@ -152,6 +239,26 @@ function Detail({ row, onClose }: { row: OpportunityRowT; onClose: () => void })
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </header>
+
+        <div className="triage">
+          <button
+            type="button"
+            className={`triage-btn${flagged === "Y" ? " active flag" : ""}`}
+            disabled={flagPending}
+            onClick={() => toggleFlag("flaggedByUser", flagged)}
+          >
+            <Icon name="plus" size={14} /> {flagged === "Y" ? "Flagged" : "Flag as interesting"}
+          </button>
+          <button
+            type="button"
+            className={`triage-btn${rejected === "Y" ? " active reject" : ""}`}
+            disabled={flagPending}
+            onClick={() => toggleFlag("rejectedByUser", rejected)}
+          >
+            <Icon name="x" size={14} /> {rejected === "Y" ? "Rejected" : "Reject"}
+          </button>
+        </div>
+
         <div className="drawer-links">
           {row.link && <a href={String(row.link)} target="_blank" rel="noreferrer" className="btn quiet">View on SAM.gov <Icon name="external" size={14} /></a>}
           {row.additionalInfoLink && <a href={String(row.additionalInfoLink)} target="_blank" rel="noreferrer" className="btn quiet">Additional info <Icon name="external" size={14} /></a>}
@@ -170,6 +277,37 @@ function Detail({ row, onClose }: { row: OpportunityRowT; onClose: () => void })
         <section className="drawer-desc">
           <h4>Description</h4>
           <p>{row.description ? String(row.description) : "—"}</p>
+        </section>
+
+        <section className="drawer-docs">
+          <h4>Documents</h4>
+          {docsLoading ? (
+            <p className="muted">Loading…</p>
+          ) : docs.length === 0 ? (
+            <p className="muted">No documents attached yet.</p>
+          ) : (
+            <ul className="doc-list">
+              {docs.map((d) => (
+                <li key={d.objectId} className="doc-item">
+                  <Icon name="evidence" size={14} />
+                  <span className="doc-name">{d.displayName}</span>
+                  <span className="mono muted">{fmtBytes(d.size)}</span>
+                  <span className="mono muted">{d.documentType}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="doc-upload">
+            <input
+              ref={fileRef}
+              type="file"
+              hidden
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
+            />
+            <button type="button" className="btn quiet" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              <Icon name="upload" size={14} /> {uploading ? "Uploading…" : "Attach a document"}
+            </button>
+          </div>
         </section>
       </aside>
     </>

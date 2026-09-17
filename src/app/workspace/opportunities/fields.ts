@@ -106,6 +106,7 @@ export const FIELDS: FieldT[] = [
 
   // Pipeline / internal
   { key: "opportunityId", column: "opportunity_id", label: "Opportunity ID", type: "number", group: "Pipeline" },
+  { key: "flaggedByUser", column: "flagged_by_user", label: "Flagged by user", type: "flag", group: "Pipeline", flagValues: [["Y", "Yes"], ["N", "No"]] },
   { key: "rejectedByUser", column: "rejected_by_user", label: "Rejected by user", type: "flag", group: "Pipeline", flagValues: [["Y", "Yes"], ["N", "No"]] },
   { key: "parseTimestamp", column: "parse_timestamp", label: "Parsed (UTC)", type: "timestamp", group: "Pipeline" },
   { key: "lineNumberInExtract", column: "line_number_in_extract", label: "Line in extract", type: "number", group: "Pipeline" },
