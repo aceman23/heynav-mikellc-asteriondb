@@ -49,6 +49,10 @@ endpoints or secrets.
 | `HEYNAV_QUERY_API` | `heyNav/queryBidOpportunities` | DbTwig API for the opportunities query |
 | `HEYNAV_GET_OPPORTUNITY_API` | `heyNav/getBidOpportunity` | DbTwig API for one opportunity incl. description |
 | `HEYNAV_UPLOAD_API` | `dgBunker/uploadFiles` | Multipart upload entry point used by `/api/upload` |
+| `HEYNAV_SET_FLAGS_API` | `heyNav/setOpportunityFlags` | Interested / rejected flags |
+| `HEYNAV_ATTACH_DOCUMENT_API` | `heyNav/attachDocument` | Record an uploaded object against an opportunity |
+| `HEYNAV_GET_DOCUMENTS_API` | `heyNav/getDocuments` | List documents for an opportunity |
+| `HEYNAV_ASK_API` | `heyNav/askQuestion` | Grounded question answering with citations |
 | `PORT` | `3000` | Port for `npm start` / the container |
 
 ## Watching the API calls
@@ -78,8 +82,9 @@ sanitized responses.
 | `/` | Redirects by session state | — |
 | `/login` | Sign-in screen | `GET  <DB_TWIG_LOGIN_SETTINGS_API>` on render; `POST icam/createUserSession` on submit |
 | `/workspace` | Dashboard inside the app shell | — (protected) |
-| `/workspace/opportunities` | Query screen over `bid_opportunities` — every column filterable, sortable, choosable; URL is the query | `POST heyNav/queryBidOpportunities`; row click → `POST heyNav/getBidOpportunity` |
+| `/workspace/opportunities` | Query screen over `bid_opportunities` — every column filterable, sortable, choosable; URL is the query. Row drawer: interested/reject flags, attached documents, upload | `POST heyNav/queryBidOpportunities`; drawer → `getBidOpportunity`, `setOpportunityFlags`, `getDocuments`, `attachDocument`, `dgBunker/uploadFiles` |
 | `/workspace/<slug>` | Placeholder for each function (ask, shred, comply, draft, red-team, share, vault, evidence, audit, workspaces, library, settings) | — (protected) |
+| `/workspace/ask` | Ask a question over vault documents (optionally scoped to one opportunity) | `POST heyNav/askQuestion` via `/api/ask` |
 | `/workspace/vault` | Upload files into the bunker with per-file progress | `POST dgBunker/uploadFiles` (multipart, via `/api/upload`) |
 | `/logout` | Terminates the session, shows a receipt | `GET icam/terminateUserSession`, then the cookie is cleared |
 

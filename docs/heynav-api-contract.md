@@ -88,35 +88,78 @@ Not found → non-2xx with `errorMessage`.
 
 ---
 
-## Documents (Vault) — the part still to agree
+## setOpportunityFlags  — implemented in the app, waiting on the entry point
 
-Uploads already work through `dgBunker/uploadFiles` and return `{ "objectId": "…" }`.
-What Hey Nav needs next, in whatever form fits the AsterionDB model:
+Triage: mark an opportunity as interesting, or reject it. Two independent Y/N flags, matching
+the existing `rejected_by_user` column. Suggested DDL: `alter table bid_opportunities add
+(flagged_by_user char(1) default 'N' not null)`; the app also reads `flaggedByUser` in query
+rows and can filter on it (`{ "field": "flaggedByUser", "op": "is", "value": "Y" }`).
 
-**A. Attach an uploaded object to something.** After `uploadFiles` returns an objectId, the app
-needs to record what it belongs to — an opportunity, a workspace/pursuit, or the corporate library —
-and what kind of document it is (solicitation, amendment, attachment, past performance, …).
-Proposed heyNav entry point:
+Request — either or both keys:
 ```json
-attachDocument   { "objectId": "…", "opportunityId": 1001 | null, "workspaceId": "…" | null,
-                   "documentType": "solicitation", "displayName": "W91ZLK-26-R-0001.pdf" }
+{ "opportunityId": 1001, "flaggedByUser": "Y" }
+{ "opportunityId": 1001, "rejectedByUser": "N" }
 ```
-(If you'd rather the app pass these as extra multipart fields on `uploadFiles` so the bunker
-records them in one step, that works too — say which.)
-
-**B. List documents for an opportunity / workspace.**
+Response — the row's flags after the change:
 ```json
-getDocuments     { "opportunityId": 1001 }   →  { "documents": [ { "objectId", "displayName",
-                                                   "documentType", "size", "uploadedBy", "uploadedAt" } ] }
+{ "opportunityId": 1001, "flaggedByUser": "Y", "rejectedByUser": "N" }
+```
+Who flagged and when is worth recording server-side (`flagged_by`, `flagged_at`) for the audit
+stream; the app doesn't need them back yet.
+
+## Documents  — implemented in the app, waiting on the entry points
+
+Upload is already live through `dgBunker/uploadFiles` → `{ "objectId" }`. The app then records
+what the object belongs to with `attachDocument`, and lists with `getDocuments`. Suggested table
+in the heyNav schema: `documents (object_id, opportunity_id null, workspace_id null,
+display_name, document_type, size_bytes, uploaded_by, uploaded_at)`.
+
+### attachDocument
+Request:
+```json
+{ "objectId": "…", "opportunityId": 1001, "displayName": "W91ZLK-26-R-0001.pdf",
+  "documentType": "attachment", "size": 1834221 }
+```
+`opportunityId` may be `null` for library documents. `documentType` is free text for now
+(`solicitation`, `amendment`, `attachment`, `past-performance`, …).
+
+Response — the stored record:
+```json
+{ "objectId": "…", "opportunityId": 1001, "displayName": "…", "documentType": "…",
+  "size": 1834221, "uploadedBy": "AsterionDB Administrator", "uploadedAt": "2026-09-16T16:46:48" }
 ```
 
-**C. Open or download a stored object by objectId** in the browser, e.g. the solicitation PDF.
-Is there a dgBunker entry point or URL pattern that streams an object's bytes for a given
-objectId under the caller's session — and can it be linked directly (`<a href>`/`<iframe>`),
-or does it have to be proxied through the Hey Nav server like uploads are?
+### getDocuments
+Request: `{ "opportunityId": 1001 }` (`null` → every document the caller may see)
+Response: `{ "documents": [ …records as above… ] }`, newest first.
 
-**D. Replace a version.** `uploadFiles` with `newVersion=Y` + `objectId` is already wired;
-confirm the returned objectId is the same object (new version) rather than a new object.
+### Still open
+- **Opening an object** by objectId in the browser (view the PDF): is there a dgBunker URL
+  pattern the app can link to under the caller's session, or must it be proxied like uploads?
+- **New versions**: `uploadFiles` with `newVersion=Y` + `objectId` is wired; confirm the same
+  objectId comes back.
+
+## askQuestion  — first RAG cut; implemented in the app, waiting on the entry point
+
+One question, one grounded answer, citations to the documents it came from. Scope is either one
+opportunity's documents or everything the caller may see. Chunking, embedding, and retrieval are
+entirely on the database side; the app never sees document contents except through citations.
+
+Request:
+```json
+{ "question": "What are the evaluation criteria?", "opportunityId": 1001 }   // opportunityId may be null
+```
+Response:
+```json
+{
+  "answer": "Proposals are evaluated on technical approach, past performance, and price …",
+  "citations": [
+    { "objectId": "…", "displayName": "W91ZLK-26-R-0001.pdf", "snippet": "Section M.2 — Evaluation factors …" }
+  ]
+}
+```
+`citations` may be empty when nothing relevant was found — the app shows the answer as-is, so the
+answer text should say so rather than guess. Long-running: fine for now; the app waits.
 
 ---
 
