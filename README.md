@@ -46,6 +46,8 @@ endpoints or secrets.
 | `DB_TWIG_LOGIN_SETTINGS_API` | `dgBunker/getLoginPageSettings` | Anonymous call made when the login page renders. Change to the Hey Nav service once it is enrolled in DbTwig. |
 | `DB_TWIG_LOG_SECRETS` | `0` | `1` prints full session ids in the server log instead of a redacted prefix |
 | `HEYNAV_SAMPLE_DATA` | `0` | `1` evaluates opportunity queries in-memory over marked sample rows (UI testing before the `heyNav` service exists) |
+| `HEYNAV_QUERY_MODE` | `full` | `basic` fetches every row from `HEYNAV_LIST_API` (no parameters) and filters/sorts/pages in the app; `full` POSTs the query to `HEYNAV_QUERY_API` |
+| `HEYNAV_LIST_API` | `heyNav/getBidOpportunities` | Parameterless list entry point used in `basic` mode |
 | `HEYNAV_QUERY_API` | `heyNav/queryBidOpportunities` | DbTwig API for the opportunities query |
 | `HEYNAV_GET_OPPORTUNITY_API` | `heyNav/getBidOpportunity` | DbTwig API for one opportunity incl. description |
 | `HEYNAV_UPLOAD_API` | `dgBunker/uploadFiles` | Multipart upload entry point used by `/api/upload` |
@@ -160,8 +162,12 @@ choosable and sortable; the URL encodes the whole query so results can be bookma
 
 The API contract the screen is built against is in `docs/heynav-api-contract.md`; `db/heynav/` is a
 reference PL/SQL implementation of it (see its README for install).
-Until that service is installed, set `HEYNAV_SAMPLE_DATA=1` to drive the screen from a small
-set of rows marked `SAMPLE-*`; the results bar flags this so nobody mistakes it for the feed.
+Three query modes, chosen by env: `HEYNAV_SAMPLE_DATA=1` drives the screen from rows marked
+`SAMPLE-*`; `HEYNAV_QUERY_MODE=basic` calls the parameterless `heyNav/getBidOpportunities`, normalizes
+whatever column names come back (camelCase, snake_case, or UPPERCASE; Oracle date formats), and runs
+the filter/sort/page engine in the app; `full` sends the query to `heyNav/queryBidOpportunities`. The
+results bar labels the mode. `/api/opportunities/raw` (signed in) shows the list entry point's raw
+response and which catalog columns were recognised — use it to check a new entry point's shape.
 
 ## File uploads (Vault)
 

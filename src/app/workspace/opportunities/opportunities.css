@@ -39,6 +39,7 @@
 .results-count { font-family: var(--display); font-size: 14px; color: var(--navy); display: flex; align-items: center; gap: 12px; }
 .results-count .muted, .muted { color: var(--steel); font-weight: 400; }
 .tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; }
+.tag.live { background: rgba(62, 124, 89, 0.14); color: #2b5a40; border: 1px solid rgba(62, 124, 89, 0.45); }
 .tag.sample { background: rgba(199, 154, 58, 0.18); color: #7a5a17; border: 1px solid rgba(199, 154, 58, 0.5); }
 .results-paging { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 13px; color: var(--steel); }
 .results-paging label { display: flex; align-items: center; gap: 6px; }

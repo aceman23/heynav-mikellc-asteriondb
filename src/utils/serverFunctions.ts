@@ -7,6 +7,8 @@ import { callDbTwig, dbTwigBaseUrl } from "./dbTwig";
 import { getSessionCookie } from "./sessionCookie";
 import { evaluateSample, sampleSetFlags, sampleGetDocuments, sampleAttachDocument, sampleAskQuestion, type SampleDocumentT } from "./opportunitiesSample";
 import { effectiveFilters, type QueryT, type QueryResultT, type OpportunityRowT } from "@/app/workspace/opportunities/queryModel";
+import { evaluateRows, extractRows, normalizeRow, presentKeys } from "./opportunityQuery";
+import { sampleById } from "./opportunitiesSample";
 
 export type ServerResponseT<T = Record<string, unknown>> = {
   jsonData: T;
@@ -70,7 +72,55 @@ export async function getSessionSummary(): Promise<SessionSummaryT | null> {
 // service is enrolled.
 
 const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
+
+// Query modes:
+//   sample — HEYNAV_SAMPLE_DATA=1: in-memory over sample rows
+//   basic  — HEYNAV_QUERY_MODE=basic: fetch every row from HEYNAV_LIST_API
+//            (heyNav/getBidOpportunities, no parameters) and filter/sort/page in the app
+//   full   — default: POST HEYNAV_QUERY_API with the query; the database does the work
+const QUERY_MODE: "sample" | "basic" | "full" = SAMPLE_MODE ? "sample" : process.env.HEYNAV_QUERY_MODE === "basic" ? "basic" : "full";
+const LIST_API = process.env.HEYNAV_LIST_API ?? "heyNav/getBidOpportunities";
+const GET_OPPORTUNITY_API = process.env.HEYNAV_GET_OPPORTUNITY_API ?? "heyNav/getBidOpportunity";
 const QUERY_API = process.env.HEYNAV_QUERY_API ?? "heyNav/queryBidOpportunities";
+
+/** basic mode: fetch and normalize every row the list entry point returns. */
+async function fetchAllOpportunities(): Promise<{ rows: OpportunityRowT[]; raw: unknown; ok: boolean; httpStatus: number; errorMessage?: string }> {
+  const session = await getSessionCookie();
+  if (!session?.sessionId) return { rows: [], raw: null, ok: false, httpStatus: 401, errorMessage: "Your session has expired. Sign in again." };
+  const response = await callDbTwig<unknown>(LIST_API, undefined, session.sessionId);
+  if (!response.ok) {
+    const err = (response.jsonData as { errorMessage?: string } | null)?.errorMessage;
+    return { rows: [], raw: response.jsonData, ok: false, httpStatus: response.httpStatus, errorMessage: err ?? `HTTP ${response.httpStatus}` };
+  }
+  const rawRows = extractRows(response.jsonData);
+  const rows = rawRows.map(normalizeRow);
+  console.log(`[opportunities] basic mode — ${LIST_API} returned ${rawRows.length} rows; keys: ${presentKeys(rows).join(", ") || "(none matched the catalog)"}`);
+  if (rawRows[0]) console.log("[opportunities] first raw row:", JSON.stringify(rawRows[0]).slice(0, 600));
+  return { rows, raw: response.jsonData, ok: true, httpStatus: response.httpStatus };
+}
+
+/** Diagnostic: the list entry point's raw response, for checking the shape. */
+export async function getRawOpportunitiesPayload() {
+  return fetchAllOpportunities();
+}
+
+/** One opportunity, mode-aware: sample rows, the basic-mode list, or the entry point. */
+export async function getBidOpportunity(opportunityId: number): Promise<{ jsonData: OpportunityRowT | { errorMessage: string }; ok: boolean; httpStatus: number }> {
+  if (QUERY_MODE === "sample") {
+    const row = sampleById(opportunityId);
+    return row ? { jsonData: row, ok: true, httpStatus: 200 } : { jsonData: { errorMessage: "Opportunity not found." }, ok: false, httpStatus: 404 };
+  }
+  if (QUERY_MODE === "basic") {
+    const all = await fetchAllOpportunities();
+    if (!all.ok) return { jsonData: { errorMessage: all.errorMessage ?? "Could not load opportunities." }, ok: false, httpStatus: all.httpStatus };
+    const row = all.rows.find((r) => Number(r.opportunityId) === opportunityId);
+    return row ? { jsonData: row, ok: true, httpStatus: 200 } : { jsonData: { errorMessage: "Opportunity not found in the current list." }, ok: false, httpStatus: 404 };
+  }
+  const session = await getSessionCookie();
+  if (!session?.sessionId) return { jsonData: { errorMessage: "Your session has expired. Sign in again." }, ok: false, httpStatus: 401 };
+  const response = await callDbTwig<OpportunityRowT & { errorMessage?: string }>(GET_OPPORTUNITY_API, { opportunityId }, session.sessionId);
+  return { jsonData: response.jsonData, ok: response.ok, httpStatus: response.httpStatus };
+}
 
 export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT> {
   // "in" filters also carry a pre-split values[] array for the SQL side.
@@ -90,6 +140,15 @@ export async function queryBidOpportunities(query: QueryT): Promise<QueryResultT
     console.log("[opportunities] sample mode —", JSON.stringify(request));
     const { rows, total } = evaluateSample(query, filters);
     return { rows, total, page: query.page, pageSize: query.pageSize, source: "sample", apiCall: QUERY_API };
+  }
+
+  if (QUERY_MODE === "basic") {
+    const all = await fetchAllOpportunities();
+    if (!all.ok) {
+      return { rows: [], total: 0, page: query.page, pageSize: query.pageSize, source: "basic", apiCall: LIST_API, httpStatus: all.httpStatus, errorMessage: all.errorMessage };
+    }
+    const { rows, total } = evaluateRows(all.rows, query, filters);
+    return { rows, total, page: query.page, pageSize: query.pageSize, source: "basic", apiCall: LIST_API, availableKeys: presentKeys(all.rows) };
   }
 
   const session = await getSessionCookie();

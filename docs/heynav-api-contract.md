@@ -15,6 +15,12 @@ Conventions the app relies on:
 
 ---
 
+## getBidOpportunities  — live on cloud-test (no parameters, limited columns)
+The app's `basic` mode calls this, normalizes column names (any of `noticeId` / `notice_id` /
+`NOTICE_ID`) and Oracle date formats, and filters/sorts/pages in the app. Any envelope works
+(`[…]` or `{ "anything": […] }`). Columns it doesn't return show as "—". When
+`queryBidOpportunities` below exists, the app switches to it with one env var.
+
 ## queryBidOpportunities  — implemented in the app, waiting on the entry point
 
 Request:

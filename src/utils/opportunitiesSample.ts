@@ -5,7 +5,7 @@
 // the PL/SQL API implements (db/heynav/heynav_query.pls) — treat it as the
 // executable spec for those semantics.
 
-import { FIELD_BY_KEY } from "@/app/workspace/opportunities/fields";
+import { evaluateRows } from "./opportunityQuery";
 import type { FilterT, OpportunityRowT, QueryT } from "@/app/workspace/opportunities/queryModel";
 
 const d = (s: string) => s; // dates as ISO strings
@@ -21,86 +21,8 @@ const SAMPLE_ROWS: OpportunityRowT[] = [
   { opportunityId: 1008, noticeId: "SAMPLE-0008", title: "Secure Cloud Migration for Mission Applications", solicitationNumber: "HC1028-26-R-0031", departmentAgency: "DEPT OF DEFENSE", cgac: "097", subTier: "DEFENSE INFORMATION SYSTEMS AGENCY", fpdsCode: "97AS", office: "DITCO-SCOTT", aacCode: "HC1028", postedDate: d("2026-09-12"), type: "Solicitation", baseType: "Presolicitation", archiveType: "auto30", archiveDate: null, setAsideCode: "HZC", setAside: "HUBZone Set-Aside (FAR 19.13)", responseDeadline: d("2026-10-20T16:00:00"), naicsCode: "518210", classificationCode: "DF01", popStreetAddress: null, popCity: "Scott AFB", popState: "IL", popZipCode: "62225", popCountry: "USA", active: "Yes", awardNumber: null, awardDate: null, awardAmount: null, awardee: null, primaryContactTitle: null, primaryContactFullname: "Sample Contact Eight", primaryContactEmail: "sample.eight@example.mil", primaryContactPhone: null, primaryContactFax: null, secondaryContactTitle: null, secondaryContactFullname: null, secondaryContactEmail: null, secondaryContactPhone: null, secondaryContactFax: null, organizationType: "OFFICE", state: "IL", city: "Scott AFB", zipCode: "62225", countryCode: "USA", additionalInfoLink: null, link: "https://sam.gov/opp/SAMPLE-0008/view", description: "Sample notice. Migration of mission applications to an IL5 cloud environment.", rejectedByUser: "N", flaggedByUser: "Y", parseTimestamp: d("2026-09-13T04:10:00"), lineNumberInExtract: 9 },
 ];
 
-function cmpText(a: unknown, b: string, op: FilterT["op"]) {
-  const s = a == null ? "" : String(a).toUpperCase();
-  const v = b.toUpperCase();
-  switch (op) {
-    case "contains": return s.includes(v);
-    case "notContains": return !s.includes(v);
-    case "equals": return s === v;
-    case "startsWith": return s.startsWith(v);
-    case "in": return v.split(",").map((x) => x.trim()).filter(Boolean).includes(s);
-    default: return true;
-  }
-}
-
-function dayOf(v: unknown): string | null {
-  if (v == null) return null;
-  return String(v).slice(0, 10);
-}
-
-function evalFilter(row: OpportunityRowT, f: FilterT): boolean {
-  const field = FIELD_BY_KEY[f.field];
-  if (!field) return true;
-  const raw = row[f.field];
-  if (f.op === "isEmpty") return raw == null || raw === "";
-  if (f.op === "isNotEmpty") return !(raw == null || raw === "");
-  const v = f.value ?? "";
-  const v2 = f.value2 ?? "";
-  switch (field.type) {
-    case "text":
-    case "clob":
-      return cmpText(raw, v, f.op);
-    case "flag":
-      return String(raw ?? "").toUpperCase() === v.toUpperCase();
-    case "number": {
-      if (raw == null) return false;
-      const n = Number(raw), a = Number(v), b = Number(v2);
-      switch (f.op) {
-        case "eq": return n === a;
-        case "gt": return n > a;
-        case "gte": return n >= a;
-        case "lt": return n < a;
-        case "lte": return n <= a;
-        case "between": return n >= a && n <= b;
-        default: return true;
-      }
-    }
-    case "date":
-    case "timestamp": {
-      const day = dayOf(raw);
-      if (!day) return false;
-      switch (f.op) {
-        case "on": return day === v;
-        case "before": return day < v;
-        case "after": return day > v;
-        case "between": return day >= v && day <= v2;
-        default: return true;
-      }
-    }
-  }
-}
-
-const QUICK_FIELDS = ["title", "solicitationNumber", "noticeId", "departmentAgency", "subTier", "office", "awardee"];
-
 export function evaluateSample(q: QueryT, filters: FilterT[]) {
-  let rows = SAMPLE_ROWS.filter((r) => filters.every((f) => evalFilter(r, f)));
-  if (q.quick.trim()) {
-    const needle = q.quick.trim().toUpperCase();
-    rows = rows.filter((r) => QUICK_FIELDS.some((k) => String(r[k] ?? "").toUpperCase().includes(needle)));
-  }
-  const field = FIELD_BY_KEY[q.sort];
-  rows.sort((a, b) => {
-    const x = a[q.sort], y = b[q.sort];
-    if (x == null && y == null) return 0;
-    if (x == null) return 1;
-    if (y == null) return -1;
-    const c = field?.type === "number" ? Number(x) - Number(y) : String(x).localeCompare(String(y));
-    return q.dir === "asc" ? c : -c;
-  });
-  const total = rows.length;
-  const start = (q.page - 1) * q.pageSize;
-  return { rows: rows.slice(start, start + q.pageSize), total };
+  return evaluateRows(SAMPLE_ROWS, q, filters);
 }
 
 export function sampleById(id: number) {
@@ -148,18 +70,15 @@ export function sampleAttachDocument(doc: Omit<SampleDocumentT, "uploadedBy" | "
 }
 
 export function sampleAskQuestion(question: string, opportunityId: number | null) {
+  // Deliberately NOT a fabricated answer: nothing here is grounded on document
+  // content, and a demo must not look like RAG is working when it isn't.
   const docs = sampleGetDocuments(opportunityId);
-  if (docs.length === 0) {
-    return {
-      answer: "No documents are attached to this opportunity yet. Upload a solicitation or attachment first, then ask again.",
-      citations: [],
-    };
-  }
-  const first = docs[0];
+  const opp = opportunityId ? SAMPLE_ROWS.find((r) => r.opportunityId === opportunityId) : null;
+  const scope = opp ? `opportunity ${opp.noticeId} (${docs.length} attached document${docs.length === 1 ? "" : "s"})` : `all ${docs.length} documents`;
   return {
-    answer: `Based on ${first.displayName}, proposals are evaluated on technical approach, past performance, and price. The solicitation describes scope, period of performance, and submission instructions. This is a sample answer generated from the sample document set — when the heyNav service is enrolled, this will be a grounded RAG response with citations to specific passages.`,
-    citations: [
-      { objectId: first.objectId, displayName: first.displayName, snippet: "Section M.2 — Evaluation factors: technical approach, past performance, and price." },
-    ],
+    answer:
+      `Sample mode — no inference endpoint is configured, so this is a placeholder, not an answer. ` +
+      `In production this question ("${question}") would be answered only from ${scope}, with a citation for every claim.`,
+    citations: docs.slice(0, 3).map((d) => ({ objectId: d.objectId, displayName: d.displayName, snippet: "(snippet from the document would appear here)" })),
   };
 }

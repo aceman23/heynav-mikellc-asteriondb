@@ -157,7 +157,9 @@ export type QueryResultT = {
   total: number;
   page: number;
   pageSize: number;
-  source: "dbtwig" | "sample";
+  source: "dbtwig" | "sample" | "basic";
+  /** basic mode: which catalog keys the entry point actually returned. */
+  availableKeys?: string[];
   errorMessage?: string;
   httpStatus?: number;
   apiCall: string;

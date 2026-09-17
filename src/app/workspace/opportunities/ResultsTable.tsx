@@ -89,6 +89,11 @@ export function ResultsTable({
             </>
           )}
           {result.source === "sample" && <span className="tag sample">Sample data — not from the data layer</span>}
+          {result.source === "basic" && (
+            <span className="tag live" title={`Columns returned: ${(result.availableKeys ?? []).join(", ")}`}>
+              Live · {result.apiCall} · filtered in the app · {result.availableKeys?.length ?? 0} of {FIELDS.length} columns
+            </span>
+          )}
         </div>
         <div className="results-paging">
           <label>
