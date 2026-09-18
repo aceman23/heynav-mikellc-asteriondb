@@ -55,7 +55,7 @@ endpoints or secrets.
 | `HEYNAV_ATTACH_DOCUMENT_API` | `heyNav/attachDocument` | Record an uploaded object against an opportunity |
 | `HEYNAV_GET_DOCUMENTS_API` | `heyNav/getDocuments` | List documents for an opportunity |
 | `HEYNAV_ASK_API` | `heyNav/askQuestion` | Grounded question answering with citations |
-| `PORT` | `3000` | Port for `npm start` / the container |
+| `PORT` | `3000` | Port for `npm start` / the container. **Must be set in the shell or the service unit, not in `.env`/`.env.local`** — Next.js binds the port before it reads env files. `PORT=8080 npm start`, or `npm start -- -p 8080`. |
 
 ## Watching the API calls
 
@@ -128,6 +128,23 @@ public/mike-llc-logo.png
 | `npm run typecheck` | TypeScript check without emitting |
 | `npm run build` | Production build (`.next/standalone`) |
 | `npm start` | Serve the production build |
+
+## Working against cloud-test from your machine
+
+DbTwig on cloud-test listens on port 8080 on the compute node. Open an SSH tunnel (Steve has your public key on the node), then point the app at the tunnel:
+
+```bash
+ssh opc@cloud-test-compute.asteriondb.com -L 8080:localhost:8080
+# leave this running
+```
+
+In `.env.local`:
+
+```
+DB_TWIG_URL=http://localhost:8080/dbTwig
+```
+
+The tunnel forwards your local `localhost:8080` to the compute node's `localhost:8080`, so the app talks to DbTwig as if it were local. Keep the SSH session open while you work.
 
 ## Running in a container
 
