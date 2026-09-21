@@ -9,7 +9,11 @@ the contract below is what the screen is built against.
 
 Conventions the app relies on:
 - Success: HTTP 2xx, JSON body as described.
-- Failure: non-2xx with `{ "errorMessage": "…" }` — the app shows `errorMessage` inline.
+- Failure: non-2xx with `{ "status": false, "errorCode": n, "errorMessage": "…" }` (DbTwig's envelope) —
+  the app shows `errorMessage` inline.
+- Expired session: HTTP 403 with `errorCode` 20002 ("This session has timed out") — the app clears its
+  cookie and returns the user to sign-in. ICAM idle timeout is 1 day and every call resets it, so
+  no keep-alive is needed.
 - Dates as `YYYY-MM-DD`; timestamps as `YYYY-MM-DDTHH:MI:SS` (no zone; treated as given).
 - JSON keys are camelCase; the full column ↔ key map is in `src/app/workspace/opportunities/fields.ts`.
 

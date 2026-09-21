@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "../Icon";
+import { redirectIfSessionExpired } from "@/utils/sessionExpiry";
 import { FIELD_BY_KEY, GROUPS, FIELDS } from "./fields";
 import { PAGE_SIZES, type QueryT, type QueryResultT, type OpportunityRowT } from "./queryModel";
 
@@ -54,6 +55,7 @@ export function ResultsTable({
     try {
       const httpResponse = await fetch(`/api/opportunities/${id}`);
       const data = (await httpResponse.json()) as Record<string, unknown>;
+      if (redirectIfSessionExpired(httpResponse.status, data)) return;
       if (httpResponse.ok && !data.errorMessage) {
         const full = data as OpportunityRowT;
         console.log("[opportunities] getBidOpportunity ← ok");
@@ -197,6 +199,7 @@ function Detail({ row, onClose }: { row: OpportunityRowT; onClose: () => void })
         body: JSON.stringify(patch),
       });
       const data = await res.json() as { flaggedByUser?: string; rejectedByUser?: string; errorMessage?: string };
+      if (redirectIfSessionExpired(res.status, data)) return;
       if (res.ok && !data.errorMessage) {
         if (data.flaggedByUser) setFlagged(data.flaggedByUser);
         if (data.rejectedByUser) setRejected(data.rejectedByUser);
@@ -210,6 +213,7 @@ function Detail({ row, onClose }: { row: OpportunityRowT; onClose: () => void })
     try {
       const { uploadFile } = await import("@/utils/upload");
       const result = await uploadFile(file);
+      if (redirectIfSessionExpired(result.httpStatus, result.jsonData)) return;
       if (result.ok) {
         const objectId = (result.jsonData as { objectId?: string }).objectId ?? null;
         if (objectId) {

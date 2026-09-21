@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "../Icon";
+import { redirectIfSessionExpired } from "@/utils/sessionExpiry";
 
 type CitationT = {
   objectId: string;
@@ -38,6 +39,7 @@ export function AskScreen() {
         }),
       });
       const data = (await res.json()) as AskResultT & { errorMessage?: string };
+      if (redirectIfSessionExpired(res.status, data)) return;
       if (!res.ok || data.errorMessage) {
         setError(data.errorMessage ?? `HTTP ${res.status}`);
       } else {

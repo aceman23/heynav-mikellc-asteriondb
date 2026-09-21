@@ -15,10 +15,12 @@ type EndStateT =
 export default function LogoutPage() {
   const [state, setState] = useState<EndStateT>({ phase: "closing" });
   const ran = useRef(false); // React strict mode mounts twice in dev
+  const [expired, setExpired] = useState(false); // ?reason=expired — set by the app when DbTwig reports a timed-out session
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
+    setExpired(new URLSearchParams(window.location.search).get("reason") === "expired");
 
     console.log("[logout] terminateUserSession →");
     fetch("/api/logout", { method: "POST" })
@@ -59,22 +61,28 @@ export default function LogoutPage() {
 
           {state.phase === "closed" && (
             <>
-              <h1 style={{ marginTop: 40 }}>You&apos;re signed out.</h1>
+              <h1 style={{ marginTop: 40 }}>{expired ? "Your session timed out." : "You're signed out."}</h1>
               <p className="sub">
-                {state.hadSession
-                  ? "The database session was terminated and nothing about it remains in this browser."
-                  : "There was no open session in this browser, so there was nothing to close."}
+                {expired
+                  ? "The data layer closed the session after a period of inactivity. Sign in again to pick up where you left off."
+                  : state.hadSession
+                    ? "The database session was terminated and nothing about it remains in this browser."
+                    : "There was no open session in this browser, so there was nothing to close."}
               </p>
             </>
           )}
 
           {state.phase === "failed" && (
             <>
-              <h1 style={{ marginTop: 40 }}>Signed out locally.</h1>
-              <div className="error" role="alert">
-                {state.message}
-                <span className="code">icam/terminateUserSession · HTTP {state.httpStatus || "no response"}</span>
-              </div>
+              <h1 style={{ marginTop: 40 }}>{expired ? "Your session timed out." : "Signed out locally."}</h1>
+              {expired ? (
+                <p className="sub">The data layer closed the session after a period of inactivity. Sign in again to pick up where you left off.</p>
+              ) : (
+                <div className="error" role="alert">
+                  {state.message}
+                  <span className="code">icam/terminateUserSession · HTTP {state.httpStatus || "no response"}</span>
+                </div>
+              )}
             </>
           )}
 

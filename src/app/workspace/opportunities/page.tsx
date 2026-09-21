@@ -2,6 +2,8 @@ import { queryBidOpportunities } from "@/utils/serverFunctions";
 import { decodeQuery } from "./queryModel";
 import { QueryScreen } from "./QueryScreen";
 import "./opportunities.css";
+import { redirect } from "next/navigation";
+import { isSessionExpired } from "@/utils/sessionExpiry";
 
 export const dynamic = "force-dynamic";
 
@@ -14,5 +16,8 @@ export default async function OpportunitiesPage({
 }) {
   const query = decodeQuery(await searchParams);
   const result = await queryBidOpportunities(query);
+  if (result.httpStatus && isSessionExpired(result.httpStatus, { errorMessage: result.errorMessage })) {
+    redirect("/logout?reason=expired");
+  }
   return <QueryScreen query={query} result={result} />;
 }
