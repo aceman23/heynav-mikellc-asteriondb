@@ -134,7 +134,7 @@ public/mike-llc-logo.png
 DbTwig on cloud-test listens on port 8080 on the compute node. Open an SSH tunnel (Steve has your public key on the node), then point the app at the tunnel:
 
 ```bash
-ssh opc@cloud-test-compute.asteriondb.com -L 8080:localhost:8080
+ssh asterion@cloud-test-compute.asteriondb.com -L 8080:localhost:8080
 # leave this running
 ```
 
