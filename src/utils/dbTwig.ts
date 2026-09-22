@@ -104,7 +104,12 @@ export async function callDbTwig<T = Record<string, unknown>>(
   try {
     jsonData = (rawText ? JSON.parse(rawText) : {}) as T;
   } catch {
-    jsonData = { errorMessage: rawText.slice(0, 300) } as T;
+    const isHtml = /<(!doctype\s+html|html[\s>])/i.test(rawText);
+    jsonData = {
+      errorMessage: isHtml
+        ? `The data layer returned an HTML error page for ${apiCall}. Check DB_TWIG_URL and the API entry point.`
+        : rawText.slice(0, 300),
+    } as T;
   }
 
   console.log(
