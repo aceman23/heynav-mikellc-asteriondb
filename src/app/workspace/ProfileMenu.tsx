@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "./Icon";
 import type { SessionSummaryT } from "@/utils/serverFunctions";
 
@@ -57,6 +58,10 @@ export function ProfileMenu({ session }: { session: SessionSummaryT }) {
             <span>{session.emailAddress ?? "No email on record"}</span>
             <span className="mono">Session opened {new Date(session.signedInAt).toLocaleString()}</span>
           </div>
+          <Link href="/workspace/profile/naics" role="menuitem" className="menu-item" onClick={() => setOpen(false)}>
+            <Icon name="settings" />
+            My NAICS codes
+          </Link>
           <button type="button" role="menuitem" className="menu-item" onClick={signOut}>
             <Icon name="signout" />
             Sign out

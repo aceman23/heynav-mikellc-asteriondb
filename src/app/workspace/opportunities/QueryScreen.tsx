@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "../Icon";
 import { FIELDS, FIELD_BY_KEY, GROUPS, DEFAULT_COLUMNS, type FieldT } from "./fields";
 import {
@@ -32,7 +33,11 @@ function blankFilter(): FilterT {
   return { field: "title", op: "contains", value: "" };
 }
 
-export function QueryScreen({ query, result }: { query: QueryT; result: QueryResultT }) {
+export function QueryScreen({ query, result, profileCodes = [] }: { query: QueryT; result: QueryResultT; profileCodes?: string[] }) {
+  // "My NAICS" comes from the user's saved profile (see /workspace/profile/naics).
+  const presets = profileCodes.length
+    ? [{ label: `My NAICS (${profileCodes.length})`, filters: [{ field: "naicsCode", op: "in", value: profileCodes.join(",") } as FilterT] }, ...PRESETS]
+    : PRESETS;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState<QueryT>(query);
@@ -106,7 +111,8 @@ export function QueryScreen({ query, result }: { query: QueryT; result: QueryRes
 
         <div className="qb-presets" aria-label="Presets">
           <span>Start from:</span>
-          {PRESETS.map((p) => (
+          {profileCodes.length === 0 && <Link href="/workspace/profile/naics" className="chip">Set up My NAICS →</Link>}
+          {presets.map((p) => (
             <button key={p.label} type="button" className="chip" onClick={() => applyPreset(p)}>{p.label}</button>
           ))}
         </div>

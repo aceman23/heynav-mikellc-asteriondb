@@ -173,6 +173,28 @@ answer text should say so rather than guess. Long-running: fine for now; the app
 
 ---
 
+## NAICS  — live on cloud-test (Steve's shapes, used as-is)
+
+`getNaicsSectors` (no parameters) → `[ { "sectorCode": "11", "sector": "…", "description": "…" } ]`
+`getNaicsBySector` `{ "sectorCode": "54" }` → `{ "naicsBySector": [ { "naicsCodeId": 660, "naicsCode": "541512", "title": "…" } ] }`
+`getNaicsCodeDescriptions` `{ "naicsCodeId": 660 }` → `{ "naicsCode": "…", "title": "…", "descriptions": [ { "descriptionId": 16452, "description": "…" } ] }`
+
+The app keys everything on `naicsCodeId` and only uses `naicsCode` for display and for matching
+`bid_opportunities.naics_code`, so the planned 48/49 normalization won't affect it. Titles are
+trimmed client-side (some carry a trailing space).
+
+## User profile  — implemented in the app, waiting on the entry points
+
+The user's verified codes, stored per user and used as the default "My NAICS" filter.
+
+`getUserProfile` (no parameters) →
+```json
+{ "naicsCodes": [ { "naicsCodeId": 660, "naicsCode": "541512", "title": "Computer Systems Design Services", "sectorCode": "54" } ],
+  "updatedAt": "2026-09-22T14:00:00" }
+```
+`saveUserProfile` `{ "naicsCodes": [ …same records… ] }` → the saved profile (same shape). Replaces the
+whole set; an empty array clears it. Suggested table: `user_naics (user_id, naics_code_id, added_at)`.
+
 ## Session
 
 Already working end to end:
