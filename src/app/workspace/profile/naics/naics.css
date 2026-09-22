@@ -1,0 +1,31 @@
+.naics-layout .link-btn { border: 0; background: none; color: var(--purple); font-family: var(--display); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 6px; white-space: nowrap; }
+.naics-bar .link-btn { border: 0; background: none; color: var(--signal); font-family: var(--display); font-size: 13px; font-weight: 600; cursor: pointer; }
+.muted { color: var(--steel); }
+.naics-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; align-items: start; }
+.naics-sectors ul, .code-list, .code-detail ul { list-style: none; }
+.naics-sectors ul { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.sector-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; cursor: pointer; font-family: var(--display); font-size: 13.5px; color: var(--ink); }
+.sector-btn:hover { background: var(--paper); }
+.sector-btn.open { background: rgba(91, 46, 145, 0.07); border-color: rgba(91, 46, 145, 0.25); }
+.sector-btn .mono { font-size: 11px; color: var(--steel); min-width: 24px; }
+.sector-name { flex: 1; }
+.sector-btn .count { font-family: var(--mono); font-size: 11px; background: var(--gold); color: var(--ink); border-radius: 999px; padding: 1px 7px; }
+.naics-codes-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.naics-codes-head .control { width: 280px; align-items: center; padding-left: 10px; color: var(--steel); }
+.naics-codes-head .control input { padding: 8px 8px; }
+.sector-block { margin-top: 14px; }
+.sector-block h4 { font-family: var(--display); font-weight: 700; font-size: 13.5px; color: var(--navy); padding-bottom: 6px; border-bottom: 1px solid var(--line2); }
+.sector-block h4 .mono { color: var(--steel); margin-right: 6px; }
+.code-list li { border-bottom: 1px solid var(--line2); }
+.code-list li.on { background: rgba(199, 154, 58, 0.08); }
+.code-row { display: flex; align-items: center; gap: 12px; padding: 8px 6px; cursor: pointer; }
+.code-num { min-width: 60px; color: var(--navy); }
+.code-title { flex: 1; font-size: 14.5px; }
+.code-detail { padding: 4px 6px 12px 92px; font-size: 13.5px; }
+.code-detail ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2px 18px; }
+.code-detail li { color: var(--steel); }
+.code-detail li::before { content: "· "; color: var(--gold); }
+.naics-bar { position: sticky; bottom: 0; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; background: rgba(244, 241, 233, 0.96); backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 10px; font-family: var(--display); font-size: 14px; color: var(--navy); }
+.naics-bar-actions { display: flex; align-items: center; gap: 12px; }
+.naics-bar .btn.primary { margin: 0; }
+@media (max-width: 900px) { .naics-layout { grid-template-columns: 1fr; } .naics-codes-head .control { width: 100%; } }

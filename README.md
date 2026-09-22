@@ -86,6 +86,7 @@ sanitized responses.
 | `/workspace` | Dashboard inside the app shell | — (protected) |
 | `/workspace/opportunities` | Query screen over `bid_opportunities` — every column filterable, sortable, choosable; URL is the query. Row drawer: interested/reject flags, attached documents, upload | `POST heyNav/queryBidOpportunities`; drawer → `getBidOpportunity`, `setOpportunityFlags`, `getDocuments`, `attachDocument`, `dgBunker/uploadFiles` |
 | `/workspace/<slug>` | Placeholder for each function (ask, shred, comply, draft, red-team, share, vault, evidence, audit, workspaces, library, settings) | — (protected) |
+| `/workspace/profile/naics` | Choose sectors and verify NAICS codes; saved to the user profile and used as the "My NAICS" preset | `getNaicsSectors`, `getNaicsBySector`, `getNaicsCodeDescriptions`, `getUserProfile`, `saveUserProfile` |
 | `/workspace/ask` | Ask a question over vault documents (optionally scoped to one opportunity) | `POST heyNav/askQuestion` via `/api/ask` |
 | `/workspace/vault` | Upload files into the bunker with per-file progress | `POST dgBunker/uploadFiles` (multipart, via `/api/upload`) |
 | `/logout` | Terminates the session, shows a receipt | `GET icam/terminateUserSession`, then the cookie is cleared |

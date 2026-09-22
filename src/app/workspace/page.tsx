@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { getSessionSummary } from "@/utils/serverFunctions";
+import { getSessionSummary, getProfileNaicsCodes } from "@/utils/serverFunctions";
 
 // Dashboard. Nothing here is faked: workspace listing lands with C-1/C-2,
 // so until the heyNav DbTwig service exists this is an honest empty state
 // plus the things that are real today (the session, the wiring).
 export default async function DashboardPage() {
   const session = (await getSessionSummary())!;
+  const naics = await getProfileNaicsCodes();
   const first = session.displayName.split(" ")[0];
 
   return (
@@ -21,6 +22,23 @@ export default async function DashboardPage() {
           Query opportunities
         </Link>
       </div>
+
+      {naics.length === 0 ? (
+        <section className="panel" style={{ marginBottom: 16, borderColor: "var(--gold)" }} aria-labelledby="naics-title">
+          <h3 id="naics-title">Set up your NAICS codes</h3>
+          <p className="muted" style={{ margin: "6px 0 12px" }}>Tell Hey Nav which sectors and codes you work in and it becomes your default opportunity filter.</p>
+          <Link href="/workspace/profile/naics" className="btn primary">Choose my codes</Link>
+        </section>
+      ) : (
+        <section className="panel" style={{ marginBottom: 16 }} aria-labelledby="naics-title">
+          <h3 id="naics-title">Your NAICS codes</h3>
+          <p className="muted" style={{ margin: "6px 0 12px" }}>{naics.join(", ")}</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Link href="/workspace/opportunities?preset=mynaics" className="btn primary">Opportunities in my codes</Link>
+            <Link href="/workspace/profile/naics" className="btn quiet">Edit</Link>
+          </div>
+        </section>
+      )}
 
       <section className="panel empty" aria-labelledby="pursuits-title">
         <h3 id="pursuits-title">No pursuit workspaces yet</h3>

@@ -1,4 +1,4 @@
-import { queryBidOpportunities } from "@/utils/serverFunctions";
+import { queryBidOpportunities, getProfileNaicsCodes } from "@/utils/serverFunctions";
 import { decodeQuery } from "./queryModel";
 import { QueryScreen } from "./QueryScreen";
 import "./opportunities.css";
@@ -14,10 +14,16 @@ export default async function OpportunitiesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = decodeQuery(await searchParams);
+  const params = await searchParams;
+  const profileCodes = await getProfileNaicsCodes();
+  // ?preset=mynaics — deep link from the NAICS profile page.
+  if (params.preset === "mynaics" && profileCodes.length) {
+    redirect(`/workspace/opportunities?f=${encodeURIComponent(`naicsCode|in|${encodeURIComponent(profileCodes.join(","))}`)}`);
+  }
+  const query = decodeQuery(params);
   const result = await queryBidOpportunities(query);
   if (result.httpStatus && isSessionExpired(result.httpStatus, { errorMessage: result.errorMessage })) {
     redirect("/logout?reason=expired");
   }
-  return <QueryScreen query={query} result={result} />;
+  return <QueryScreen query={query} result={result} profileCodes={profileCodes} />;
 }

@@ -280,3 +280,63 @@ export async function askQuestion(question: string, opportunityId: number | null
   }
   return response.jsonData;
 }
+
+// ---- NAICS + user profile --------------------------------------------------
+// Steve's NAICS entry points (live on cloud-test) and the profile the user's
+// verified codes are stored in. Identity is naicsCodeId, never the code string,
+// so sector normalization (48/49) on the database side can't break anything here.
+
+import {
+  sampleSectors, sampleBySector, sampleDescriptions, sampleGetProfile, sampleSaveProfile,
+  type NaicsSectorT, type NaicsCodeT, type NaicsCodeDetailT, type ProfileNaicsT, type UserProfileT,
+} from "./naicsSample";
+export type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT, UserProfileT };
+
+const NAICS_SECTORS_API = process.env.HEYNAV_NAICS_SECTORS_API ?? "heyNav/getNaicsSectors";
+const NAICS_BY_SECTOR_API = process.env.HEYNAV_NAICS_BY_SECTOR_API ?? "heyNav/getNaicsBySector";
+const NAICS_DESCRIPTIONS_API = process.env.HEYNAV_NAICS_DESCRIPTIONS_API ?? "heyNav/getNaicsCodeDescriptions";
+const GET_PROFILE_API = process.env.HEYNAV_GET_PROFILE_API ?? "heyNav/getUserProfile";
+const SAVE_PROFILE_API = process.env.HEYNAV_SAVE_PROFILE_API ?? "heyNav/saveUserProfile";
+
+type R<T> = { jsonData: T | { errorMessage?: string }; ok: boolean; httpStatus: number };
+const NO_SESSION = { jsonData: { errorMessage: "Your session has expired. Sign in again." }, ok: false, httpStatus: 401 } as const;
+
+async function withSid<T>(fn: (sid: string) => Promise<R<T>>): Promise<R<T>> {
+  const session = await getSessionCookie();
+  if (!session?.sessionId) return NO_SESSION;
+  return fn(session.sessionId);
+}
+
+export async function getNaicsSectors(): Promise<R<NaicsSectorT[]>> {
+  if (SAMPLE_MODE) return { jsonData: sampleSectors(), ok: true, httpStatus: 200 };
+  return withSid((sid) => callDbTwig<NaicsSectorT[]>(NAICS_SECTORS_API, undefined, sid));
+}
+
+export async function getNaicsBySector(sectorCode: string): Promise<R<{ naicsBySector: NaicsCodeT[] }>> {
+  if (SAMPLE_MODE) return { jsonData: { naicsBySector: sampleBySector(sectorCode) }, ok: true, httpStatus: 200 };
+  return withSid((sid) => callDbTwig<{ naicsBySector: NaicsCodeT[] }>(NAICS_BY_SECTOR_API, { sectorCode }, sid));
+}
+
+export async function getNaicsCodeDescriptions(naicsCodeId: number): Promise<R<NaicsCodeDetailT>> {
+  if (SAMPLE_MODE) {
+    const d = sampleDescriptions(naicsCodeId);
+    return d ? { jsonData: d, ok: true, httpStatus: 200 } : { jsonData: { errorMessage: "Unknown NAICS code id." }, ok: false, httpStatus: 404 };
+  }
+  return withSid((sid) => callDbTwig<NaicsCodeDetailT>(NAICS_DESCRIPTIONS_API, { naicsCodeId }, sid));
+}
+
+export async function getUserProfile(): Promise<R<UserProfileT>> {
+  if (SAMPLE_MODE) return { jsonData: sampleGetProfile(), ok: true, httpStatus: 200 };
+  return withSid((sid) => callDbTwig<UserProfileT>(GET_PROFILE_API, undefined, sid));
+}
+
+export async function saveUserProfile(naicsCodes: ProfileNaicsT[]): Promise<R<UserProfileT>> {
+  if (SAMPLE_MODE) return { jsonData: sampleSaveProfile(naicsCodes), ok: true, httpStatus: 200 };
+  return withSid((sid) => callDbTwig<UserProfileT>(SAVE_PROFILE_API, { naicsCodes }, sid));
+}
+
+/** The profile's codes as plain strings, for the "My NAICS" preset. Empty when unset or unavailable. */
+export async function getProfileNaicsCodes(): Promise<string[]> {
+  const r = await getUserProfile();
+  return r.ok && "naicsCodes" in r.jsonData ? r.jsonData.naicsCodes.map((c) => c.naicsCode) : [];
+}

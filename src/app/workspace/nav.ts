@@ -45,8 +45,15 @@ export const NAV: NavGroupT[] = [
 
 export const SETTINGS: NavItemT = { slug: "settings", label: "Settings", icon: "settings", description: "Roles, identity provider, retention defaults, and inference endpoint.", sprint: "E-3 / E-4 · Sprints 5–6" };
 
+// Pages reachable from the profile menu rather than the sidebar.
+export const HIDDEN: NavItemT[] = [
+  { slug: "profile", label: "My profile", icon: "settings", description: "Your NAICS codes and defaults." },
+];
+
 export function findNavItem(slug: string): NavItemT | undefined {
   if (slug === SETTINGS.slug) return SETTINGS;
+  const hidden = HIDDEN.find((h) => h.slug === slug);
+  if (hidden) return hidden;
   for (const g of NAV) for (const i of g.items) if (i.slug === slug) return i;
   return undefined;
 }
