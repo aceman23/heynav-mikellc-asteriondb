@@ -40,3 +40,34 @@ export async function getSessionCookie(): Promise<SessionCookieT | undefined> {
     return undefined;
   }
 }
+
+// ---- Default NAICS mirror --------------------------------------------------
+// heyNav/setDefaultNaicsCodes stores the user's defaults, but there is no read
+// entry point yet. Until there is, the app keeps a copy of what it last saved
+// successfully in this cookie so the profile page and "My NAICS" preset work.
+// Once HEYNAV_GET_PROFILE_API is set, the database is read instead.
+
+const NAICS_COOKIE = "heynav.naics";
+
+export async function setNaicsMirror(codes: { naicsCodeId: number; naicsCode: string; title: string; sectorCode: string }[]) {
+  const cookieStore = await cookies();
+  cookieStore.set(NAICS_COOKIE, JSON.stringify(codes), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+export async function getNaicsMirror(): Promise<{ naicsCodeId: number; naicsCode: string; title: string; sectorCode: string }[]> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(NAICS_COOKIE)?.value;
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "../../Icon";
 import { redirectIfSessionExpired } from "@/utils/sessionExpiry";
@@ -35,6 +35,12 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
     console.log("[naics] getNaicsBySector", sectorCode, "←", r.status, data.naicsBySector?.length ?? data.errorMessage);
     setCodesBySector((m) => ({ ...m, [sectorCode]: r.ok && data.naicsBySector ? data.naicsBySector.map((c) => ({ ...c, title: c.title.trim() })) : { error: data.errorMessage ?? `HTTP ${r.status}` } }));
   }
+
+  // Sectors that already hold saved codes start open; load their code lists.
+  useEffect(() => {
+    openSectors.forEach((sc) => loadSector(sc));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggleSector(sectorCode: string) {
     setOpenSectors((s) => (s.includes(sectorCode) ? s.filter((x) => x !== sectorCode) : [...s, sectorCode]));

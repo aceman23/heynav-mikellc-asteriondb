@@ -4,7 +4,7 @@
 // the route handlers under /api/.
 
 import { callDbTwig, dbTwigBaseUrl } from "./dbTwig";
-import { getSessionCookie } from "./sessionCookie";
+import { getSessionCookie, getNaicsMirror, setNaicsMirror } from "./sessionCookie";
 import { evaluateSample, sampleSetFlags, sampleGetDocuments, sampleAttachDocument, sampleAskQuestion, type SampleDocumentT } from "./opportunitiesSample";
 import { effectiveFilters, type QueryT, type QueryResultT, type OpportunityRowT } from "@/app/workspace/opportunities/queryModel";
 import { evaluateRows, extractRows, normalizeRow, presentKeys } from "./opportunityQuery";
@@ -295,8 +295,10 @@ export type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT, UserPro
 const NAICS_SECTORS_API = process.env.HEYNAV_NAICS_SECTORS_API ?? "heyNav/getNaicsSectors";
 const NAICS_BY_SECTOR_API = process.env.HEYNAV_NAICS_BY_SECTOR_API ?? "heyNav/getNaicsBySector";
 const NAICS_DESCRIPTIONS_API = process.env.HEYNAV_NAICS_DESCRIPTIONS_API ?? "heyNav/getNaicsCodeDescriptions";
-const GET_PROFILE_API = process.env.HEYNAV_GET_PROFILE_API ?? "heyNav/getUserProfile";
-const SAVE_PROFILE_API = process.env.HEYNAV_SAVE_PROFILE_API ?? "heyNav/saveUserProfile";
+// Read side not built yet: leave HEYNAV_GET_PROFILE_API unset and the app reads
+// its cookie mirror; set it once the getter exists.
+const GET_PROFILE_API = process.env.HEYNAV_GET_PROFILE_API ?? "";
+const SAVE_PROFILE_API = process.env.HEYNAV_SAVE_PROFILE_API ?? "heyNav/setDefaultNaicsCodes";
 
 type R<T> = { jsonData: T | { errorMessage?: string }; ok: boolean; httpStatus: number };
 const NO_SESSION = { jsonData: { errorMessage: "Your session has expired. Sign in again." }, ok: false, httpStatus: 401 } as const;
@@ -327,12 +329,29 @@ export async function getNaicsCodeDescriptions(naicsCodeId: number): Promise<R<N
 
 export async function getUserProfile(): Promise<R<UserProfileT>> {
   if (SAMPLE_MODE) return { jsonData: sampleGetProfile(), ok: true, httpStatus: 200 };
-  return withSid((sid) => callDbTwig<UserProfileT>(GET_PROFILE_API, undefined, sid));
+  if (!GET_PROFILE_API) {
+    return { jsonData: { naicsCodes: await getNaicsMirror(), updatedAt: null }, ok: true, httpStatus: 200 };
+  }
+  const r = await withSid((sid) => callDbTwig<{ defaultNaicsCodes?: ProfileNaicsT[]; naicsCodes?: ProfileNaicsT[] }>(GET_PROFILE_API, undefined, sid));
+  if (!r.ok) return r as R<UserProfileT>;
+  const d = r.jsonData as { defaultNaicsCodes?: ProfileNaicsT[]; naicsCodes?: ProfileNaicsT[] };
+  const codes = (d.defaultNaicsCodes ?? d.naicsCodes ?? []).map((c) => ({ ...c, title: String(c.title ?? "").trim() }));
+  return { jsonData: { naicsCodes: codes, updatedAt: null }, ok: true, httpStatus: r.httpStatus };
 }
 
+/**
+ * heyNav/setDefaultNaicsCodes { defaultNaicsCodes: [{ naicsCodeId }] } — a procedure:
+ * it deletes the user's defaults and inserts the full set sent, returning only
+ * success/failure. Always send the complete set; an empty array clears it.
+ */
 export async function saveUserProfile(naicsCodes: ProfileNaicsT[]): Promise<R<UserProfileT>> {
   if (SAMPLE_MODE) return { jsonData: sampleSaveProfile(naicsCodes), ok: true, httpStatus: 200 };
-  return withSid((sid) => callDbTwig<UserProfileT>(SAVE_PROFILE_API, { naicsCodes }, sid));
+  const r = await withSid((sid) =>
+    callDbTwig<Record<string, unknown>>(SAVE_PROFILE_API, { defaultNaicsCodes: naicsCodes.map((c) => ({ naicsCodeId: c.naicsCodeId })) }, sid),
+  );
+  if (!r.ok) return r as R<UserProfileT>;
+  await setNaicsMirror(naicsCodes);
+  return { jsonData: { naicsCodes, updatedAt: new Date().toISOString() }, ok: true, httpStatus: r.httpStatus };
 }
 
 /** The profile's codes as plain strings, for the "My NAICS" preset. Empty when unset or unavailable. */

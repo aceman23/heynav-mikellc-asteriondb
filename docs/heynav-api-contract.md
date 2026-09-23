@@ -183,17 +183,23 @@ The app keys everything on `naicsCodeId` and only uses `naicsCode` for display a
 `bid_opportunities.naics_code`, so the planned 48/49 normalization won't affect it. Titles are
 trimmed client-side (some carry a trailing space).
 
-## User profile  — implemented in the app, waiting on the entry points
+## Default NAICS codes
 
-The user's verified codes, stored per user and used as the default "My NAICS" filter.
-
-`getUserProfile` (no parameters) →
+`setDefaultNaicsCodes` — live on cloud-test. A procedure: deletes the user's defaults and inserts the
+set sent; returns success/failure only.
 ```json
-{ "naicsCodes": [ { "naicsCodeId": 660, "naicsCode": "541512", "title": "Computer Systems Design Services", "sectorCode": "54" } ],
-  "updatedAt": "2026-09-22T14:00:00" }
+{ "defaultNaicsCodes": [ { "naicsCodeId": 676 }, { "naicsCodeId": 660 } ] }
 ```
-`saveUserProfile` `{ "naicsCodes": [ …same records… ] }` → the saved profile (same shape). Replaces the
-whole set; an empty array clears it. Suggested table: `user_naics (user_id, naics_code_id, added_at)`.
+The app always sends the complete set; an empty array clears the defaults.
+
+`getDefaultNaicsCodes` — **needed**. No parameters; returns the user's defaults so the profile page
+and the "My NAICS" preset can load them:
+```json
+{ "defaultNaicsCodes": [ { "naicsCodeId": 660, "naicsCode": "512110", "title": "Motion Picture and Video Production", "sectorCode": "51" } ] }
+```
+`naicsCode` is what the Opportunities filter matches on `bid_opportunities.naics_code`; `sectorCode`
+lets the profile page open the right sectors. Until this exists the app keeps a cookie copy of the
+last set it saved successfully (per browser, not per user).
 
 ## Session
 
