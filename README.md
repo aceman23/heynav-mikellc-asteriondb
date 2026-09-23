@@ -22,6 +22,12 @@ httpOnly cookie. The session id never reaches the browser.
   `https://cloud-test.asteriondb.com/dbTwig`)
 - A user account on that instance (created in AsterionDB, not in this app)
 
+## System Architecture Overview 
+
+<img width="2720" height="2432" alt="heynav_system_architecture" src="https://github.com/user-attachments/assets/d4518315-f682-4285-bd03-3cb626725a47" />
+
+
+
 ## Quick start
 
 ```bash
