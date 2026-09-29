@@ -112,3 +112,6 @@
   .qb-row .icon-btn { grid-column: 2; justify-self: end; }
   .qb-quick { flex-direction: column; }
 }
+
+.qb-scope { margin-top: 10px; font-family: var(--display); font-size: 13px; color: var(--steel); }
+.qb-scope a { color: var(--purple); font-weight: 600; text-decoration: none; }

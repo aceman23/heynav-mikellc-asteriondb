@@ -250,3 +250,19 @@ a.btn, a.btn:hover, a.btn:focus, a.btn:active, a.btn:visited { text-decoration: 
 .end-card .ledger dd { color: var(--ink); }
 .end-card .actions { display: flex; gap: 12px; margin-top: 28px; }
 .end-card .actions .btn { width: auto; padding-inline: 28px; }
+
+/* ---- Session-limit panel on the login screen ---- */
+.sessions { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.sessions-alert { border-left: 3px solid var(--gold); background: var(--white); padding: 12px 14px; }
+.sessions-alert strong { font-family: var(--display); font-size: 15px; color: var(--navy); }
+.sessions-alert p { margin-top: 4px; font-size: 14.5px; color: var(--steel); }
+.session-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.session-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--white); border: 1px solid var(--line2); border-radius: 8px; }
+.session-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session-device { font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--navy); }
+.session-meta { font-family: var(--mono); font-size: 11px; color: var(--steel); overflow-wrap: anywhere; }
+.session-end { flex: none; white-space: nowrap; }
+.sessions .link-btn { border: 0; background: none; color: var(--purple); font-family: var(--display); font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+.sessions-cancel { align-self: flex-start; color: var(--signal) !important; }
+.muted { color: var(--steel); }
+@media (max-width: 480px) { .session-card { flex-direction: column; align-items: stretch; } }

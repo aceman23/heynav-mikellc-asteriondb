@@ -2,11 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ActiveSessions } from "./ActiveSessions";
+import type { ActiveSessionT } from "@/utils/pendingSession";
 
 type LoginResponseT = {
-  jsonData?: { errorMessage?: string };
+  jsonData?: { errorMessage?: string; activeSessions?: ActiveSessionT[] };
   ok: boolean;
   httpStatus: number;
+  sessionLimit?: boolean;
 };
 
 export function LoginForm({ nextPath, settings }: { nextPath?: string; settings: Record<string, unknown> }) {
@@ -16,6 +19,12 @@ export function LoginForm({ nextPath, settings }: { nextPath?: string; settings:
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<{ message: string; status: number } | null>(null);
+  // Set when ICAM held the login at the session limit: the other sessions to choose from.
+  const [heldSessions, setHeldSessions] = useState<ActiveSessionT[] | null>(null);
+
+  function goIn() {
+    router.replace(nextPath && nextPath.startsWith("/") ? nextPath : "/workspace");
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +42,12 @@ export function LoginForm({ nextPath, settings }: { nextPath?: string; settings:
         console.log("[login] createUserSession ←", response.httpStatus, response);
 
         if (response.ok) {
-          router.replace(nextPath && nextPath.startsWith("/") ? nextPath : "/workspace");
+          goIn();
+          return;
+        }
+
+        if (response.sessionLimit) {
+          setHeldSessions(response.jsonData?.activeSessions ?? []);
           return;
         }
 
@@ -49,6 +63,16 @@ export function LoginForm({ nextPath, settings }: { nextPath?: string; settings:
         setError({ message: "The sign-in service could not be reached. Try again.", status: 0 });
       }
     });
+  }
+
+  if (heldSessions) {
+    return (
+      <ActiveSessions
+        initial={heldSessions}
+        onSignedIn={goIn}
+        onCancel={() => { setHeldSessions(null); setPassword(""); }}
+      />
+    );
   }
 
   return (

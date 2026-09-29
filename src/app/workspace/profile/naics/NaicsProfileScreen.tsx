@@ -12,7 +12,8 @@ import type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT } from "
 
 export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: NaicsSectorT[]; saved: ProfileNaicsT[]; loadError: string | null }) {
   const [selected, setSelected] = useState<Map<number, ProfileNaicsT>>(new Map(saved.map((c) => [c.naicsCodeId, c])));
-  const [openSectors, setOpenSectors] = useState<string[]>(() => Array.from(new Set(saved.map((c) => c.sectorCode))));
+  // One sector open at a time; codes selected in other sectors stay selected.
+  const [openSectors, setOpenSectors] = useState<string[]>(() => (saved[0] ? [saved[0].sectorCode] : []));
   const [codesBySector, setCodesBySector] = useState<Record<string, NaicsCodeT[] | "loading" | { error: string }>>({});
   const [filter, setFilter] = useState("");
   const [detail, setDetail] = useState<Record<number, NaicsCodeDetailT | "loading" | { error: string }>>({});
@@ -43,7 +44,7 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
   }, []);
 
   function toggleSector(sectorCode: string) {
-    setOpenSectors((s) => (s.includes(sectorCode) ? s.filter((x) => x !== sectorCode) : [...s, sectorCode]));
+    setOpenSectors((s) => (s.includes(sectorCode) ? [] : [sectorCode]));
     loadSector(sectorCode);
   }
 

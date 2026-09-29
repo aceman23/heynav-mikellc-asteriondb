@@ -35,7 +35,10 @@ function blankFilter(): FilterT {
 
 export function QueryScreen({ query, result, profileCodes = [] }: { query: QueryT; result: QueryResultT; profileCodes?: string[] }) {
   // "My NAICS" comes from the user's saved profile (see /workspace/profile/naics).
-  const presets = profileCodes.length
+  // In basic mode heyNav/getBidOpportunities already returns only the user's
+  // default-NAICS opportunities, so a "My NAICS" preset would just filter twice.
+  const serverScoped = result.source === "basic";
+  const presets = profileCodes.length && !serverScoped
     ? [{ label: `My NAICS (${profileCodes.length})`, filters: [{ field: "naicsCode", op: "in", value: profileCodes.join(",") } as FilterT] }, ...PRESETS]
     : PRESETS;
   const router = useRouter();
@@ -109,9 +112,15 @@ export function QueryScreen({ query, result, profileCodes = [] }: { query: Query
           </button>
         </div>
 
+        {serverScoped && (
+          <p className="qb-scope">
+            Showing opportunities in your NAICS codes{profileCodes.length ? ` (${profileCodes.join(", ")})` : ""} — the data layer applies them.{" "}
+            <Link href="/workspace/profile/naics">Change codes</Link>
+          </p>
+        )}
         <div className="qb-presets" aria-label="Presets">
           <span>Start from:</span>
-          {profileCodes.length === 0 && <Link href="/workspace/profile/naics" className="chip">Set up My NAICS →</Link>}
+          {!serverScoped && profileCodes.length === 0 && <Link href="/workspace/profile/naics" className="chip">Set up My NAICS →</Link>}
           {presets.map((p) => (
             <button key={p.label} type="button" className="chip" onClick={() => applyPreset(p)}>{p.label}</button>
           ))}
