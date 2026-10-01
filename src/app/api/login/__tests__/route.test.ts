@@ -79,13 +79,23 @@ describe("/api/login/sessions", () => {
   });
 
   it("ends another session and promotes the held one to the session cookie", async () => {
-    callDbTwig.mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { sessionStatus: "active" } });
+    callDbTwig
+      .mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { activeSessions: [{ sessionId: OTHER }] } })
+      .mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { sessionStatus: "active" } });
     const res = await endSession(req("POST", { sessionToTerminate: OTHER }));
     expect(res.status).toBe(200);
     expect(callDbTwig).toHaveBeenCalledWith("icam/abandonForCurrentSession", { sessionToTerminate: OTHER }, "HELD");
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toContain("heynav.session=");
     expect(cookie).toMatch(/heynav\.pending=;/);
+  });
+
+  it("refuses to end a session that isn't in this user's active list", async () => {
+    callDbTwig.mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { activeSessions: [{ sessionId: OTHER }] } });
+    const res = await endSession(req("POST", { sessionToTerminate: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" }));
+    expect(res.status).toBe(409);
+    expect(callDbTwig).not.toHaveBeenCalledWith("icam/abandonForCurrentSession", expect.anything(), expect.anything());
+    expect(res.headers.get("set-cookie")).toBeNull();
   });
 
   it("rejects a malformed session id without calling ICAM", async () => {

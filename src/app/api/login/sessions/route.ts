@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ errorMessage: "Choose a session to sign out." }, { status: 400 });
   }
 
+  // ICAM's abandonForCurrentSession ends whatever session id it is given without
+  // checking it belongs to this user, so only allow ids from this user's own list.
+  const mine = await callDbTwig<{ activeSessions?: ActiveSessionT[] }>("icam/getActiveSessions", undefined, pending.sessionId);
+  const owned = (mine.jsonData?.activeSessions ?? []).some((s) => s.sessionId.toUpperCase() === sessionToTerminate.toUpperCase());
+  if (!mine.ok || !owned) {
+    return NextResponse.json({ errorMessage: "That session is no longer active. Choose another." }, { status: 409 });
+  }
+
   console.log(`[login] abandonForCurrentSession → ending ${sessionToTerminate.slice(0, 8)}…`);
   const r = await callDbTwig<{ sessionStatus?: string; errorMessage?: string }>(
     "icam/abandonForCurrentSession", { sessionToTerminate }, pending.sessionId,
