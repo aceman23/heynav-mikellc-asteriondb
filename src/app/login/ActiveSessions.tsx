@@ -4,7 +4,8 @@ import { useState } from "react";
 import type { ActiveSessionT } from "@/utils/pendingSession";
 
 // Shown in place of the sign-in form when ICAM reports the account is at its
-// session limit. Lists the other active sessions; ending one signs this login in.
+// session limit. Two ways through: end one of the other sessions from here, or
+// sign out on the other device and then activate this blocked session.
 
 function when(unix: number | null): string {
   if (!unix) return "—";
@@ -36,6 +37,9 @@ export function ActiveSessions({
   const [sessions, setSessions] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // The held login is gone (timed out or ended by ICAM): only "Back to sign in" remains.
+  const [expired, setExpired] = useState(false);
 
   async function refresh() {
     const r = await fetch("/api/login/sessions");
@@ -47,6 +51,7 @@ export function ActiveSessions({
   async function end(sessionId: string) {
     setBusy(sessionId);
     setError(null);
+    setNotice(null);
     console.log("[login] end other session →", sessionId.slice(0, 8));
     const r = await fetch("/api/login/sessions", {
       method: "POST",
@@ -58,7 +63,28 @@ export function ActiveSessions({
     setBusy(null);
     if (r.ok) return onSignedIn();
     setError(data.errorMessage ?? `HTTP ${r.status}`);
-    if (r.status === 401) return;
+    if (r.status === 401) return setExpired(true);
+    refresh();
+  }
+
+  // The user signed out on the other device themselves; ask ICAM to let this
+  // blocked session in (icam/activateBlockedSession).
+  async function activate() {
+    setBusy("activate");
+    setError(null);
+    setNotice(null);
+    console.log("[login] activate blocked session →");
+    const r = await fetch("/api/login/sessions/activate", { method: "POST" });
+    const data = (await r.json().catch(() => ({}))) as { errorMessage?: string; stillBlocked?: boolean };
+    console.log("[login] activate blocked session ←", r.status, data);
+    setBusy(null);
+    if (r.ok) return onSignedIn();
+    if (r.status === 401) {
+      setExpired(true);
+      return setError(data.errorMessage ?? "That sign-in has expired. Sign in again.");
+    }
+    if (data.stillBlocked) setNotice(data.errorMessage ?? "You're still at your session limit.");
+    else setError(data.errorMessage ?? `HTTP ${r.status}`);
     refresh();
   }
 
@@ -75,11 +101,11 @@ export function ActiveSessions({
         <strong id="sessions-title">You&apos;re already signed in elsewhere</strong>
         <p>
           This account has reached its limit of active sessions. Sign out one of the sessions below to continue here,
-          or cancel and leave everything as it is.
+          or sign out on your other device and then activate this session.
         </p>
       </div>
 
-      {sessions.length === 0 ? (
+      {!expired && (sessions.length === 0 ? (
         <p className="muted">No other active sessions were found. <button type="button" className="link-btn" onClick={refresh}>Check again</button></p>
       ) : (
         <ul className="session-list">
@@ -91,18 +117,28 @@ export function ActiveSessions({
                   {s.clientAddress ?? "unknown address"} · started {when(s.sessionCreated)} · last active {when(s.lastActivity)}
                 </span>
               </div>
-              <button type="button" className="btn quiet session-end" disabled={busy !== null} onClick={() => end(s.sessionId)}>
+              <button type="button" className="btn quiet session-end" disabled={busy !== null || expired} onClick={() => end(s.sessionId)}>
                 {busy === s.sessionId ? "Signing out…" : "Sign out & continue"}
               </button>
             </li>
           ))}
         </ul>
+      ))}
+
+      {!expired && (
+        <div className="sessions-activate">
+          <p>Already signed out on your other device?</p>
+          <button type="button" className="btn sessions-activate-btn" disabled={busy !== null} onClick={activate}>
+            {busy === "activate" ? "Activating…" : "Activate blocked session"}
+          </button>
+        </div>
       )}
 
+      {notice && <div className="sessions-notice" role="status">{notice}</div>}
       {error && <div className="error">{error}</div>}
 
       <button type="button" className="link-btn sessions-cancel" disabled={busy !== null} onClick={cancel}>
-        {busy === "cancel" ? "Cancelling…" : "Cancel — don't sign in here"}
+        {busy === "cancel" ? "Cancelling…" : expired ? "Back to sign in" : "Cancel — don't sign in here"}
       </button>
     </div>
   );

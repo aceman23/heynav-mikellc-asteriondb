@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "../../Icon";
 import { redirectIfSessionExpired } from "@/utils/sessionExpiry";
 import type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT } from "@/utils/serverFunctions";
+import { applySectorDefaults } from "@/utils/naicsDefaults";
 
 // Onboarding: pick your sector(s), tick the codes you actually work in, expand a
 // code to check its index entries, save. The saved set becomes the "My NAICS"
@@ -12,6 +13,11 @@ import type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT } from "
 
 export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: NaicsSectorT[]; saved: ProfileNaicsT[]; loadError: string | null }) {
   const [selected, setSelected] = useState<Map<number, ProfileNaicsT>>(new Map(saved.map((c) => [c.naicsCodeId, c])));
+  // What's saved in AsterionDB. Starts from the app's copy, then each loaded sector's
+  // defaultNaicsCode flags correct it, so "unsaved changes" compares against the database.
+  const [baseline, setBaseline] = useState<Map<number, ProfileNaicsT>>(new Map(saved.map((c) => [c.naicsCodeId, c])));
+  // Codes the user has ticked or unticked on this visit; loading a sector never overrides these.
+  const touched = useRef<Set<number>>(new Set());
   // One sector open at a time; codes selected in other sectors stay selected.
   const [openSectors, setOpenSectors] = useState<string[]>(() => (saved[0] ? [saved[0].sectorCode] : []));
   const [codesBySector, setCodesBySector] = useState<Record<string, NaicsCodeT[] | "loading" | { error: string }>>({});
@@ -23,9 +29,9 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
 
   const dirty = useMemo(() => {
     const a = Array.from(selected.keys()).sort().join(",");
-    const b = saved.map((c) => c.naicsCodeId).sort().join(",");
+    const b = Array.from(baseline.keys()).sort().join(",");
     return a !== b;
-  }, [selected, saved]);
+  }, [selected, baseline]);
 
   async function loadSector(sectorCode: string) {
     if (codesBySector[sectorCode]) return;
@@ -34,7 +40,15 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
     const data = (await r.json().catch(() => ({}))) as { naicsBySector?: NaicsCodeT[]; errorMessage?: string };
     if (redirectIfSessionExpired(r.status, data)) return;
     console.log("[naics] getNaicsBySector", sectorCode, "←", r.status, data.naicsBySector?.length ?? data.errorMessage);
-    setCodesBySector((m) => ({ ...m, [sectorCode]: r.ok && data.naicsBySector ? data.naicsBySector.map((c) => ({ ...c, title: c.title.trim() })) : { error: data.errorMessage ?? `HTTP ${r.status}` } }));
+    if (!r.ok || !data.naicsBySector) {
+      setCodesBySector((m) => ({ ...m, [sectorCode]: { error: data.errorMessage ?? `HTTP ${r.status}` } }));
+      return;
+    }
+    const rows = data.naicsBySector.map((c) => ({ ...c, title: c.title.trim() }));
+    setCodesBySector((m) => ({ ...m, [sectorCode]: rows }));
+    // Tick the codes AsterionDB marks as the user's defaults.
+    setSelected((m) => applySectorDefaults(m, sectorCode, rows, touched.current));
+    setBaseline((m) => applySectorDefaults(m, sectorCode, rows));
   }
 
   // Sectors that already hold saved codes start open; load their code lists.
@@ -49,6 +63,7 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
   }
 
   function toggleCode(sectorCode: string, c: NaicsCodeT) {
+    touched.current.add(c.naicsCodeId);
     setSelected((m) => {
       const next = new Map(m);
       if (next.has(c.naicsCodeId)) next.delete(c.naicsCodeId);
@@ -180,7 +195,7 @@ export function NaicsProfileScreen({ sectors, saved, loadError }: { sectors: Nai
         </div>
         <div className="naics-bar-actions">
           {dirty && <button type="button" className="link-btn" onClick={() => window.location.reload()}>Discard changes</button>}
-          {!dirty && saved.length > 0 && <Link href="/workspace/opportunities?preset=mynaics" className="btn quiet">See matching opportunities</Link>}
+          {!dirty && baseline.size > 0 && <Link href="/workspace/opportunities?preset=mynaics" className="btn quiet">See matching opportunities</Link>}
           <button type="button" className="btn primary" disabled={saving || !dirty} onClick={save}>{saving ? "Saving…" : "Save to profile"}</button>
         </div>
       </div>

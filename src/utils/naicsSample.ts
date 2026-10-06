@@ -7,7 +7,8 @@
 // This is a small subset; titles follow NAICS 2022, ids are invented.
 
 export type NaicsSectorT = { sectorCode: string; sector: string; description: string };
-export type NaicsCodeT = { naicsCodeId: number; naicsCode: string; title: string };
+// defaultNaicsCode: whether the code is in the user's saved defaults (normalized to a boolean by getNaicsBySector).
+export type NaicsCodeT = { naicsCodeId: number; naicsCode: string; title: string; defaultNaicsCode?: boolean };
 export type NaicsDescriptionT = { descriptionId: number; description: string };
 export type NaicsCodeDetailT = { naicsCode: string; title: string; descriptions: NaicsDescriptionT[] };
 
@@ -83,7 +84,10 @@ add("61", "611710", "Educational Support Services", ["Educational consultants", 
 add("62", "621111", "Offices of Physicians (except Mental Health Specialists)", ["Physicians' offices (except mental health specialists)"]);
 
 export function sampleSectors(): NaicsSectorT[] { return SAMPLE_SECTORS; }
-export function sampleBySector(sectorCode: string): NaicsCodeT[] { return BY_SECTOR[sectorCode] ?? []; }
+export function sampleBySector(sectorCode: string): NaicsCodeT[] {
+  const saved = new Set(profile.naicsCodes.map((c) => c.naicsCodeId));
+  return (BY_SECTOR[sectorCode] ?? []).map((c) => ({ ...c, defaultNaicsCode: saved.has(c.naicsCodeId) }));
+}
 export function sampleDescriptions(naicsCodeId: number): NaicsCodeDetailT | null {
   for (const list of Object.values(BY_SECTOR)) {
     const c = list.find((x) => x.naicsCodeId === naicsCodeId);

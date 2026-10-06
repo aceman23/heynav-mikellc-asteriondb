@@ -10,6 +10,7 @@ vi.mock("@/utils/dbTwig", () => ({ callDbTwig: (...a: unknown[]) => callDbTwig(.
 
 import { POST as login } from "../route";
 import { GET as listSessions, POST as endSession, DELETE as cancelHeld } from "../sessions/route";
+import { POST as activateHeld } from "../sessions/activate/route";
 
 function loginReq() {
   return login(new Request("http://x/api/login", {
@@ -115,5 +116,42 @@ describe("/api/login/sessions", () => {
     expect(res.status).toBe(200);
     expect(callDbTwig).toHaveBeenCalledWith("icam/terminateUserSession", undefined, "HELD");
     expect(res.headers.get("set-cookie") ?? "").toMatch(/heynav\.pending=;/);
+  });
+});
+
+describe("POST /api/login/sessions/activate", () => {
+  it("signs in when ICAM activates the blocked session", async () => {
+    callDbTwig.mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { sessionStatus: "active" } });
+    const res = await activateHeld(req("POST"));
+    expect(res.status).toBe(200);
+    expect(callDbTwig).toHaveBeenCalledWith("icam/activateBlockedSession", undefined, "HELD");
+    const cookie = res.headers.get("set-cookie") ?? "";
+    expect(cookie).toMatch(/heynav\.session=/);
+    expect(cookie).toMatch(/heynav\.pending=;/);
+  });
+  it("stays held when the account is still at its session limit", async () => {
+    callDbTwig.mockResolvedValueOnce({ ok: true, httpStatus: 200, jsonData: { sessionStatus: "session limit" } });
+    const res = await activateHeld(req("POST"));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ stillBlocked: true });
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it("drops the held login when ICAM rejects it (timed out or ended)", async () => {
+    callDbTwig.mockResolvedValueOnce({ ok: false, httpStatus: 403, jsonData: { errorCode: 20002, errorMessage: "session timed out" } });
+    const res = await activateHeld(req("POST"));
+    expect(res.status).toBe(401);
+    expect(res.headers.get("set-cookie") ?? "").toMatch(/heynav\.pending=;/);
+    expect(res.headers.get("set-cookie") ?? "").not.toMatch(/heynav\.session=/);
+  });
+  it("keeps the held login when the service can't be reached", async () => {
+    callDbTwig.mockResolvedValueOnce({ ok: false, httpStatus: 0, jsonData: { errorMessage: "fetch failed" } });
+    const res = await activateHeld(req("POST"));
+    expect(res.status).toBe(502);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it("doesn't call ICAM without a held login", async () => {
+    const res = await activateHeld(req("POST", undefined, ""));
+    expect(res.status).toBe(401);
+    expect(callDbTwig).not.toHaveBeenCalled();
   });
 });

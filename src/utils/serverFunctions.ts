@@ -290,6 +290,7 @@ import {
   sampleSectors, sampleBySector, sampleDescriptions, sampleGetProfile, sampleSaveProfile,
   type NaicsSectorT, type NaicsCodeT, type NaicsCodeDetailT, type ProfileNaicsT, type UserProfileT,
 } from "./naicsSample";
+import { isDefaultFlag } from "./naicsDefaults";
 export type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT, UserProfileT };
 
 const NAICS_SECTORS_API = process.env.HEYNAV_NAICS_SECTORS_API ?? "heyNav/getNaicsSectors";
@@ -316,7 +317,14 @@ export async function getNaicsSectors(): Promise<R<NaicsSectorT[]>> {
 
 export async function getNaicsBySector(sectorCode: string): Promise<R<{ naicsBySector: NaicsCodeT[] }>> {
   if (SAMPLE_MODE) return { jsonData: { naicsBySector: sampleBySector(sectorCode) }, ok: true, httpStatus: 200 };
-  return withSid((sid) => callDbTwig<{ naicsBySector: NaicsCodeT[] }>(NAICS_BY_SECTOR_API, { sectorCode }, sid));
+  const r = await withSid((sid) =>
+    callDbTwig<{ naicsBySector: (Omit<NaicsCodeT, "defaultNaicsCode"> & { defaultNaicsCode?: unknown })[] }>(NAICS_BY_SECTOR_API, { sectorCode }, sid),
+  );
+  if (!r.ok || !("naicsBySector" in r.jsonData) || !Array.isArray(r.jsonData.naicsBySector)) return r as R<{ naicsBySector: NaicsCodeT[] }>;
+  // defaultNaicsCode marks the user's saved defaults; normalize whatever form it
+  // arrives in (Y/N, true/false, 1/0) to a boolean.
+  const naicsBySector = r.jsonData.naicsBySector.map((c) => ({ ...c, defaultNaicsCode: isDefaultFlag(c.defaultNaicsCode) }));
+  return { ...r, jsonData: { naicsBySector } };
 }
 
 export async function getNaicsCodeDescriptions(naicsCodeId: number): Promise<R<NaicsCodeDetailT>> {
