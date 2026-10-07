@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { callDbTwig, dbTwigBaseUrl } from "@/utils/dbTwig";
 import { deleteSessionCookie, getSessionCookie } from "@/utils/sessionCookie";
 
+const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
+
 export async function POST() {
   const session = await getSessionCookie();
   const dataLayer = dbTwigBaseUrl();
 
   if (!session) {
     return NextResponse.json({ jsonData: {}, ok: true, httpStatus: 204, hadSession: false, dataLayer });
+  }
+
+  if (SAMPLE_MODE) {
+    console.log("[logout] sample mode — clearing cookie without calling DbTwig");
+    await deleteSessionCookie();
+    return NextResponse.json({ jsonData: {}, ok: true, httpStatus: 200, hadSession: true, dataLayer });
   }
 
   const response = await callDbTwig<{ errorMessage?: string }>(

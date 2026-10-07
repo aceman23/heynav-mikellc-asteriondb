@@ -3,6 +3,8 @@ import { callDbTwig } from "@/utils/dbTwig";
 import type { UserSessionT } from "@/utils/serverFunctions";
 import { PENDING_COOKIE, SESSION_LIMIT_STATUS, cookieOptions, type ActiveSessionT } from "@/utils/pendingSession";
 
+const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
+
 export async function POST(request: Request) {
   let body: unknown;
 
@@ -31,6 +33,28 @@ export async function POST(request: Request) {
       { jsonData: { errorMessage: "Enter an identification and password." }, ok: false, httpStatus: 400 },
       { status: 400 },
     );
+  }
+
+  // Sample mode: no database behind us, so accept any non-empty credentials.
+  if (SAMPLE_MODE) {
+    console.log("[login] sample mode — accepting any credentials");
+    const displayName = identification.replace(/[@].*/, "");
+    const result = NextResponse.json(
+      { jsonData: { sessionStatus: "active", firstName: displayName, lastName: "", emailAddress: identification.includes("@") ? identification : null }, ok: true, httpStatus: 200 },
+      { status: 200 },
+    );
+    result.cookies.set("heynav.session", JSON.stringify({
+      sessionId: "SAMPLE-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
+      displayName,
+      emailAddress: identification.includes("@") ? identification : null,
+      signedInAt: new Date().toISOString(),
+    }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    return result;
   }
 
   const response = await callDbTwig<UserSessionT>("icam/createUserSession", {

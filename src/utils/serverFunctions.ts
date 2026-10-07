@@ -37,6 +37,8 @@ export type SessionSummaryT = {
 const LOGIN_SETTINGS_API =
   process.env.DB_TWIG_LOGIN_SETTINGS_API ?? "dgBunker/getLoginPageSettings";
 
+const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
+
 /**
  * Anonymous call made when the login page renders. On cloud-test this is
  * `dgBunker/getLoginPageSettings` (GET). Whatever it returns is passed to the
@@ -45,6 +47,9 @@ const LOGIN_SETTINGS_API =
 export async function getLoginPageSettings(): Promise<
   ServerResponseT<Record<string, unknown>> & { dataLayer: string; apiCall: string }
 > {
+  if (SAMPLE_MODE) {
+    return { jsonData: { serviceTitle: "Hey Nav (sample)" }, ok: true, httpStatus: 200, dataLayer: "sample mode", apiCall: "(sample)" };
+  }
   const response = await callDbTwig<Record<string, unknown>>(LOGIN_SETTINGS_API);
   return { ...response, dataLayer: dbTwigBaseUrl(), apiCall: LOGIN_SETTINGS_API };
 }
@@ -70,8 +75,6 @@ export async function getSessionSummary(): Promise<SessionSummaryT | null> {
 // With HEYNAV_SAMPLE_DATA=1 the same query is evaluated in-memory over a
 // clearly-marked sample set so the screen can be exercised before the
 // service is enrolled.
-
-const SAMPLE_MODE = process.env.HEYNAV_SAMPLE_DATA === "1";
 
 // Query modes:
 //   sample — HEYNAV_SAMPLE_DATA=1: in-memory over sample rows
