@@ -290,15 +290,16 @@ import {
   sampleSectors, sampleBySector, sampleDescriptions, sampleGetProfile, sampleSaveProfile,
   type NaicsSectorT, type NaicsCodeT, type NaicsCodeDetailT, type ProfileNaicsT, type UserProfileT,
 } from "./naicsSample";
-import { isDefaultFlag } from "./naicsDefaults";
+import { isDefaultFlag, parseDefaultNaicsCodes } from "./naicsDefaults";
+import { isSessionExpired } from "./sessionExpiry";
 export type { NaicsSectorT, NaicsCodeT, NaicsCodeDetailT, ProfileNaicsT, UserProfileT };
 
 const NAICS_SECTORS_API = process.env.HEYNAV_NAICS_SECTORS_API ?? "heyNav/getNaicsSectors";
 const NAICS_BY_SECTOR_API = process.env.HEYNAV_NAICS_BY_SECTOR_API ?? "heyNav/getNaicsBySector";
 const NAICS_DESCRIPTIONS_API = process.env.HEYNAV_NAICS_DESCRIPTIONS_API ?? "heyNav/getNaicsCodeDescriptions";
-// Read side not built yet: leave HEYNAV_GET_PROFILE_API unset and the app reads
-// its cookie mirror; set it once the getter exists.
-const GET_PROFILE_API = process.env.HEYNAV_GET_PROFILE_API ?? "";
+// The user's saved codes (no parameters). Set HEYNAV_GET_PROFILE_API=off to use only
+// the app's cookie copy of the last set it saved.
+const GET_PROFILE_API = process.env.HEYNAV_GET_PROFILE_API || "heyNav/getDefaultNaicsCodes";
 const SAVE_PROFILE_API = process.env.HEYNAV_SAVE_PROFILE_API ?? "heyNav/setDefaultNaicsCodes";
 
 type R<T> = { jsonData: T | { errorMessage?: string }; ok: boolean; httpStatus: number };
@@ -337,14 +338,18 @@ export async function getNaicsCodeDescriptions(naicsCodeId: number): Promise<R<N
 
 export async function getUserProfile(): Promise<R<UserProfileT>> {
   if (SAMPLE_MODE) return { jsonData: sampleGetProfile(), ok: true, httpStatus: 200 };
-  if (!GET_PROFILE_API) {
-    return { jsonData: { naicsCodes: await getNaicsMirror(), updatedAt: null }, ok: true, httpStatus: 200 };
+  const mirror = async (): Promise<R<UserProfileT>> => ({ jsonData: { naicsCodes: await getNaicsMirror(), updatedAt: null }, ok: true, httpStatus: 200 });
+  if (GET_PROFILE_API === "off") return mirror();
+  const r = await withSid((sid) => callDbTwig<unknown>(GET_PROFILE_API, undefined, sid));
+  if (!r.ok) {
+    // A dead session must reach the page so it can send the user to sign-in.
+    if (isSessionExpired(r.httpStatus, r.jsonData)) return r as R<UserProfileT>;
+    console.warn(`[profile] ${GET_PROFILE_API} failed (HTTP ${r.httpStatus}) — using the app's saved copy`);
+    return mirror();
   }
-  const r = await withSid((sid) => callDbTwig<{ defaultNaicsCodes?: ProfileNaicsT[]; naicsCodes?: ProfileNaicsT[] }>(GET_PROFILE_API, undefined, sid));
-  if (!r.ok) return r as R<UserProfileT>;
-  const d = r.jsonData as { defaultNaicsCodes?: ProfileNaicsT[]; naicsCodes?: ProfileNaicsT[] };
-  const codes = (d.defaultNaicsCodes ?? d.naicsCodes ?? []).map((c) => ({ ...c, title: String(c.title ?? "").trim() }));
-  return { jsonData: { naicsCodes: codes, updatedAt: null }, ok: true, httpStatus: r.httpStatus };
+  const naicsCodes = parseDefaultNaicsCodes(r.jsonData);
+  console.log(`[profile] ${GET_PROFILE_API} ← ${naicsCodes.length} code(s)`, naicsCodes.map((c) => c.naicsCode));
+  return { jsonData: { naicsCodes, updatedAt: null }, ok: true, httpStatus: r.httpStatus };
 }
 
 /**
