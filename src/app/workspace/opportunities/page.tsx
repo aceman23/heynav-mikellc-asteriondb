@@ -1,9 +1,9 @@
-import { queryBidOpportunities, getProfileNaicsCodes } from "@/utils/serverFunctions";
+import { queryBidOpportunities, getUserProfile } from "@/utils/serverFunctions";
 import { decodeQuery } from "./queryModel";
 import { QueryScreen } from "./QueryScreen";
 import "./opportunities.css";
 import { redirect } from "next/navigation";
-import { isSessionExpired } from "@/utils/sessionExpiry";
+import { redirectIfSessionExpiredOnServer } from "@/utils/sessionGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +15,15 @@ export default async function OpportunitiesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const profileCodes = await getProfileNaicsCodes();
+  const profile = await getUserProfile();
+  redirectIfSessionExpiredOnServer(profile);
+  const profileCodes = profile.ok && "naicsCodes" in profile.jsonData ? profile.jsonData.naicsCodes.map((c) => c.naicsCode) : [];
   // ?preset=mynaics — deep link from the NAICS profile page.
   if (params.preset === "mynaics" && profileCodes.length) {
     redirect(`/workspace/opportunities?f=${encodeURIComponent(`naicsCode|in|${encodeURIComponent(profileCodes.join(","))}`)}`);
   }
   const query = decodeQuery(params);
   const result = await queryBidOpportunities(query);
-  if (result.httpStatus && isSessionExpired(result.httpStatus, { errorMessage: result.errorMessage })) {
-    redirect("/logout?reason=expired");
-  }
+  redirectIfSessionExpiredOnServer(result);
   return <QueryScreen query={query} result={result} profileCodes={profileCodes} />;
 }

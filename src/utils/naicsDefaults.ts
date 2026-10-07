@@ -38,3 +38,37 @@ export function applySectorDefaults(
   }
   return next ?? selection;
 }
+
+// Sectors that span several two-digit prefixes go by their first one, the way
+// getNaicsSectors lists them (31-33 Manufacturing → "31").
+const SECTOR_ALIASES: Record<string, string> = { "32": "31", "33": "31", "45": "44", "49": "48" };
+
+/** The sector a code belongs to, as getNaicsSectors keys it ("541512" → "54", "332710" → "31"). */
+export function sectorOf(naicsCode: string, sectorCode?: unknown): string {
+  const raw = String(sectorCode ?? "").trim();
+  const two = (/^\d{2}/.test(raw) ? raw : String(naicsCode).trim()).slice(0, 2);
+  return SECTOR_ALIASES[two] ?? two;
+}
+
+/**
+ * heyNav/getDefaultNaicsCodes → the user's saved codes. Accepts the response as an
+ * array or wrapped in { defaultNaicsCodes } / { naicsCodes }; rows need naicsCodeId
+ * and naicsCode, and sectorCode is worked out from the code when it isn't sent.
+ */
+export function parseDefaultNaicsCodes(json: unknown): ProfileNaicsT[] {
+  const o = (json ?? {}) as Record<string, unknown>;
+  const list = Array.isArray(json) ? json : Array.isArray(o.defaultNaicsCodes) ? o.defaultNaicsCodes : Array.isArray(o.naicsCodes) ? o.naicsCodes : [];
+  const out: ProfileNaicsT[] = [];
+  for (const item of list as Record<string, unknown>[]) {
+    const naicsCodeId = Number(item?.naicsCodeId);
+    const naicsCode = String(item?.naicsCode ?? "").trim();
+    if (!Number.isFinite(naicsCodeId) || !naicsCode) continue;
+    out.push({
+      naicsCodeId,
+      naicsCode,
+      title: String(item.title ?? item.description ?? "").trim(),
+      sectorCode: sectorOf(naicsCode, item.sectorCode),
+    });
+  }
+  return out;
+}

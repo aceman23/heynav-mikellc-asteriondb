@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Icon } from "../Icon";
 import { uploadFile, type UploadResultT } from "@/utils/upload";
+import { redirectIfSessionExpired } from "@/utils/sessionExpiry";
 
 export type UploadItemT = {
   id: number;
@@ -63,6 +64,7 @@ export function UploadDropzone({
         onProgress: (percent) => update(item.id, { percent }),
       });
       console.log("[upload ←]", result.httpStatus, result.jsonData);
+      if (redirectIfSessionExpired(result.httpStatus, result.jsonData)) return;
       const done: UploadItemT = { ...item, result, percent: result.ok ? 100 : item.percent, status: result.ok ? "done" : "failed" };
       update(item.id, done);
       if (result.ok) onUploaded?.(done);

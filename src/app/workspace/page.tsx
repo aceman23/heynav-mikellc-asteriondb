@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { getSessionSummary, getProfileNaicsCodes } from "@/utils/serverFunctions";
+import { getSessionSummary, getUserProfile } from "@/utils/serverFunctions";
+import { redirectIfSessionExpiredOnServer } from "@/utils/sessionGuard";
 
 // Dashboard. Nothing here is faked: workspace listing lands with C-1/C-2,
 // so until the heyNav DbTwig service exists this is an honest empty state
 // plus the things that are real today (the session, the wiring).
 export default async function DashboardPage() {
   const session = (await getSessionSummary())!;
-  const naics = await getProfileNaicsCodes();
+  const profile = await getUserProfile();
+  redirectIfSessionExpiredOnServer(profile);
+  const naics = profile.ok && "naicsCodes" in profile.jsonData ? profile.jsonData.naicsCodes.map((c) => c.naicsCode) : [];
   const first = session.displayName.split(" ")[0];
 
   return (
